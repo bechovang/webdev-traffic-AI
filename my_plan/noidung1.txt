@@ -1,0 +1,742 @@
+
+2026-03-30 21:29
+
+Status:
+
+Tags: [[idea]]
+Disable spell check :`teh`
+# webdev cuộc thi
+
+kiếm data để train
+
+- làm 1 case thôi
+	- làm từ nhà đến fpt
+	- làm nhiều con đường, 
+
+## Cách 1: Cào ảnh bản đồ (Computer Vision / Image Processing)
+
+Đây là cách phổ biến nhất mà các sinh viên hoặc dự án zero-budget hay làm: cào lớp phủ màu (heatmap) của Google Maps.
+
+- **Cách thực hiện:** Bạn dùng Python (với Selenium/Puppeteer) mở Google Maps ở khu vực Thủ Đức, bật `Traffic Layer`. Cứ 15 phút, script sẽ tự động chụp ảnh màn hình (screenshot).
+    
+- **Suy ngược ra Data:** Đưa các bức ảnh này qua thư viện OpenCV. Dùng bộ lọc màu (Color Masking) để bóc tách các pixel theo mã hex: Xanh lá (thông thoáng), Cam (chậm), Đỏ (kẹt xe), Đỏ sẫm (tắc nghẽn). Sau đó, bạn ánh xạ (map) các tọa độ pixel màu này lên một đồ thị mạng lưới đường (Base Graph) từ OpenStreetMap.
+    
+- **Tại sao AI train bằng cách này sẽ rất kém?**
+    
+    1. **Dữ liệu bị rời rạc (Discrete):** AI dự đoán giao thông (như LSTM, GNN) hoạt động tốt nhất trên dữ liệu liên tục (km/h). Khi cào ảnh, bạn chỉ thu được 4 trạng thái (0, 1, 2, 3 tương ứng 4 màu). Việc tốc độ giảm từ 45km/h xuống 35km/h đều hiển thị màu xanh/cam, AI sẽ không học được xu hướng chớm kẹt xe.[](https://gisj.sbu.ac.ir/article_102141.html)
+        
+    2. **Nhiễu hình ảnh:** Tên đường, icon nhà hàng, trạm xe buýt trên Google Maps sẽ đè lên đường giao thông, làm đứt gãy nét vẽ màu. OpenCV sẽ nội suy sai các đoạn này.[](https://www.tandfonline.com/doi/full/10.1080/10106049.2022.2091162)
+        
+    3. **Mất dữ liệu ở đường hẻm:** Ở mức zoom bao quát toàn Thủ Đức, Google tự động ẩn (không vẽ màu) các con đường phụ để chống rối mắt.
+
+
+
+### 2) Có thể dùng Google, nhưng chỉ nên làm baseline/proxy
+
+Google Routes API có thể dùng để lấy:
+
+- `duration`
+- route matrix cho nhiều cặp origin-destination
+- traffic-aware duration thông qua mô hình traffic của Routes API.
+
+Nhưng nếu bạn dùng Google-only thì bạn đang quan sát:
+
+- **độ chậm của hành trình giữa các cặp điểm**  
+    chứ không phải:
+- **mật độ thật trên từng cell/segment**
+
+Nghĩa là bạn sẽ xây được **congestion proxy map**, không phải density map “chuẩn vật lý”.
+
+
+đổi lại đi, ko làm bằng heatmap nữa?
+- đưa các đường hay đi vào mục theo dõi
+- nó sẽ lấy >5 tuyền đường để đi từ A-B, cào rồi làm ra AI
+
+
+Không. **Không phải mỗi tuyến là 1 con AI riêng**.
+
+Cách hợp lý hơn là:
+
+## 1) Một model chung cho tất cả tuyến
+
+Mỗi tuyến là **một thực thể / một node / một chiều input-output**, không phải một model riêng.
+
+Ví dụ:
+
+- bạn có 15 tuyến
+    
+- mỗi 15 phút, mỗi tuyến có 1 số như `congestion_ratio`, `speed_kmh`, `duration_min`
+    
+- tại thời điểm `t`, input sẽ là:
+    
+    - 15 giá trị hiện tại
+        
+    - 15 giá trị của 1–4 mốc trước đó
+        
+    - thêm giờ trong ngày, thứ trong tuần, mưa/nắng, lễ/tết...
+        
+
+Output:
+
+- dự đoán 15 giá trị cho `t+15p`
+    
+- hoặc 15 giá trị cho `t+30p`
+    
+
+Tức là:
+
+**1 model → dự đoán cùng lúc tất cả tuyến**
+
+---
+
+## 2) Train có nhanh không?
+
+**Có, khá nhanh** nếu bạn làm bản đầu tiên đúng cách.
+
+Nếu dữ liệu của bạn cỡ:
+
+- 15 tuyến
+    
+- lấy mẫu mỗi 15 phút
+    
+- 30 ngày
+    
+
+thì số mốc thời gian chỉ khoảng:
+
+- 96 mốc/ngày × 30 = **2,880 time steps**
+    
+
+Đây là dataset **không lớn**. Với cỡ này:
+
+### Train rất nhanh nếu dùng:
+
+- Linear Regression
+    
+- Random Forest
+    
+- XGBoost / LightGBM
+    
+
+Thường chỉ từ **vài giây đến vài phút** trên laptop là xong.
+
+### Train vẫn ổn nếu dùng:
+
+- LSTM
+    
+- GRU
+    
+
+Thường từ **vài phút đến vài chục phút**, tùy feature và số epoch.
+
+### Chưa nên dùng ngay:
+
+- GNN / STGCN / DCRNN
+    
+
+Vì:
+
+- phức tạp hơn
+    
+- cần graph chuẩn giữa các tuyến
+    
+- dữ liệu 15 tuyến trong 1 tháng vẫn hơi ít để thấy rõ lợi ích
+    
+
+---
+
+## 3) Với dataset ít như vậy, model nào hợp nhất?
+
+Mình khuyên thứ tự này:
+
+### Giai đoạn 1
+
+Dùng **LightGBM hoặc XGBoost**
+
+Input cho mỗi mẫu:
+
+- congestion của 15 tuyến tại `t`
+    
+- congestion của 15 tuyến tại `t-15`, `t-30`, `t-45`, `t-60`
+    
+- giờ, thứ, cuối tuần
+    
+- mưa nếu có
+    
+
+Output:
+
+- congestion của 15 tuyến tại `t+15`  
+    hoặc
+    
+- train riêng 2 target:
+    
+    - `t+15`
+        
+    - `t+30`
+        
+
+Cái này train rất nhanh, dễ debug, thường ăn hơn LSTM khi dữ liệu còn ít.
+
+### Giai đoạn 2
+
+Khi có:
+
+- 3–6 tháng data
+    
+- nhiều tuyến hơn
+    
+- có adjacency giữa các tuyến
+    
+
+thì mới thử:
+
+- LSTM đa biến
+    
+- Graph Neural Network
+    
+
+---
+
+## 4) Có khi nào nên 1 tuyến = 1 model?
+
+**Có, nhưng không phải lựa chọn đầu tiên.**
+
+Chỉ nên làm vậy khi:
+
+- mỗi tuyến có hành vi rất khác nhau
+    
+- bạn có rất nhiều data cho từng tuyến
+    
+- bạn muốn tối ưu cực sâu cho từng tuyến
+    
+
+Nhược điểm:
+
+- phải train 15 model
+    
+- khó bảo trì
+    
+- tuyến mới không có data thì yếu
+    
+- mất tương quan giữa các tuyến
+    
+
+Trong giao thông, các tuyến **ảnh hưởng lẫn nhau**, nên model chung thường hợp lý hơn.
+
+Ví dụ:
+
+- Xa Lộ Hà Nội kẹt
+    
+- thì Võ Nguyên Giáp, Mai Chí Thọ, các đường nhánh cũng bị ảnh hưởng
+    
+
+Nếu train từng tuyến độc lập, model sẽ mất phần lan truyền này.
+
+---
+
+## 5) Kiến trúc đơn giản, đúng bài
+
+### Cách 1: Multi-output regression
+
+Input:
+
+- cửa sổ 4 mốc gần nhất của 15 tuyến  
+    Output:
+    
+- 15 tuyến ở `t+15`
+    
+
+Đây là cách mình khuyên nhất lúc đầu.
+
+### Cách 2: Một hàng = một tuyến tại một thời điểm
+
+Input:
+
+- route_id
+    
+- congestion hiện tại
+    
+- lag 1, lag 2, lag 3...
+    
+- giờ, thứ
+    
+- congestion các tuyến lân cận
+    
+
+Output:
+
+- congestion tuyến đó ở `t+15`
+    
+
+Cách này cũng ổn, nhưng phải feature engineering kỹ hơn.
+
+---
+
+## 6) Train nhanh nhưng dự báo có tốt không?
+
+Phần khó không phải train, mà là **dữ liệu và feature**.
+
+Model sẽ học nhanh nếu bạn có:
+
+- dữ liệu đều
+    
+- ít missing
+    
+- tuyến chọn đúng
+    
+- có lag features
+    
+- có thông tin thời gian
+    
+- có thời tiết nếu được
+    
+
+Model sẽ yếu nếu:
+
+- chỉ có 15 tuyến nhưng chọn chưa đại diện
+    
+- dữ liệu quá ngắn
+    
+- route A-B không ổn định
+    
+- API lúc lấy route bị đổi đường đi liên tục
+    
+
+---
+
+## 7) Lời khuyên thực dụng
+
+Với bài của bạn, mình sẽ làm thế này:
+
+### Bản đầu tiên
+
+- 15 tuyến
+    
+- lấy mỗi 15 phút
+    
+- 2–3 tháng data
+    
+- target: `congestion_ratio`
+    
+- model: **LightGBM multi-output**
+    
+- baseline so với:
+    
+    - giữ nguyên giá trị hiện tại
+        
+    - moving average
+        
+    - cùng giờ hôm trước
+        
+
+Nếu LightGBM đã thắng baseline rõ ràng, lúc đó mới nghĩ tới LSTM.
+
+---
+
+## 8) Câu trả lời ngắn cho câu của bạn
+
+- **Train nhanh**: có, khá nhanh nếu dùng model tabular như XGBoost/LightGBM.
+    
+- **Mỗi tuyến là 1 AI?** Không. Hợp lý nhất là **1 model chung học toàn bộ 15 tuyến**.
+    
+
+Nếu bạn muốn, mình có thể vẽ luôn cho bạn:
+
+- cấu trúc dataset
+    
+- input/output cụ thể
+    
+- và một file Python baseline `train.py` để dự đoán `t+15` cho 15 tuyến.
+
+---
+
+làm 1 cái như này
+- nhập các con đường hay đi
+- tự theo dõi >5 đường đi từ A-B
+	- mỗi user theo dõi 5–10 tuyến trước
+	- mỗi tuyến có thể có:
+	    - 1 route chính
+	    - 1–2 route thay thế
+- sau đó vừa theo dõi vừa train AI
+- báo trước là nên xuất phát sớm
+- gợi ý thời gian xuất phát cho đỡ kẹt
+- thu thập cả thời tiết, tai nạn giao thông , công trường
+- tngt và công trường, cào tin tức + admin cập nhật
+- làm thành ops, mỗi người tự host
+- thêm: tự động track đường đi, tự phát hiện các con đường hay đi, đường tắt, vòng,... => có thể gợi ý đăng bài, con đường đi mới, đường đi nhanh hơn, làm thành cộng đồng
+	- ko cần nhập thủ công
+	- - đường hay đi
+	- khung giờ hay đi
+	- điểm xuất phát/điểm đến quen thuộc
+	- đường tắt thường dùng
+	- đường vòng né kẹt
+	- các route thay thế mà user từng chọn
+	- Những gì app có thể suy ra
+		- “Bạn hay đi tuyến này vào 7:20 sáng thứ 2–6”
+		- “Tuần này bạn đang đổi sang đường song hành nhiều hơn”
+		- “Có vẻ bạn đang né đoạn Nguyễn Duy Trinh”
+		- “Route B thường nhanh hơn route A 9 phút khi mưa”
+---
+Mình thấy **ý này hợp lý và có thể làm thành sản phẩm dùng được**, nhưng nên **đổi cách đóng gói bài toán** một chút để dễ làm và dễ thắng hơn.
+
+## Mình sẽ chốt bài toán như này
+
+Không gọi là “AI giao thông toàn TP”.
+
+Hãy gọi nó là:
+
+**“Trợ lý giờ xuất phát cho các tuyến cá nhân hay đi”**
+
+Ví dụ:
+
+* nhà → công ty
+* công ty → trường
+* nhà → sân bay
+* nhà → chỗ gặp khách
+
+Nó sẽ:
+
+* theo dõi 5–20 tuyến A-B người dùng quan tâm
+* dự báo 15/30/45/60 phút tới
+* nhắc **nên đi lúc nào**
+* cảnh báo vì sao hôm nay kẹt:
+
+  * mưa
+  * tai nạn
+  * công trường
+  * giờ cao điểm bất thường
+
+Cách framing này **dễ làm hơn nhiều** so với heatmap giao thông toàn khu vực.
+
+---
+
+## Mình thấy cấu trúc bạn đưa ra là đúng hướng
+
+### 1) Nhập các con đường hay đi
+
+Đúng. Nhưng nên cho nhập theo **tuyến A-B** hơn là chỉ tên đường.
+
+Ví dụ:
+
+* “Nhà ở Linh Trung → Văn phòng ở Thảo Điền”
+* “KTX ĐHQG → sân bay”
+* “Chung cư Q9 → trung tâm”
+
+Vì người dùng thật sự quan tâm:
+
+* **mất bao lâu**
+* **mấy giờ nên đi**
+* chứ không quan tâm trừu tượng “đường Xa Lộ Hà Nội hôm nay kẹt bao nhiêu”
+
+---
+
+### 2) Tự theo dõi >5 đường đi từ A-B
+
+Rất ổn.
+
+Mình khuyên:
+
+* mỗi user theo dõi 5–10 tuyến trước
+* mỗi tuyến có thể có:
+
+  * 1 route chính
+  * 1–2 route thay thế
+
+Vì cùng A-B nhưng có thể:
+
+* đi Xa Lộ Hà Nội
+* đi đường song hành
+* đi qua Mai Chí Thọ
+* hoặc né qua tuyến khác
+
+Nếu chỉ theo dõi 1 route cố định thì đôi lúc bị “mù” khi provider đổi tuyến.
+
+---
+
+### 3) Vừa theo dõi vừa train AI
+
+Được, nhưng nên chia làm 2 phase:
+
+#### Phase 1 — chưa cần train ngay
+
+* theo dõi thời gian di chuyển
+* lấy weather / incident / roadwork
+* dùng rule + baseline đơn giản
+* đã có thể gợi ý:
+
+  * “hôm nay nên đi sớm hơn 20 phút”
+
+#### Phase 2 — mới train AI
+
+Khi đã có vài tuần đến vài tháng data:
+
+* train model dự đoán travel time / congestion cho từng tuyến
+* học theo:
+
+  * giờ trong ngày
+  * thứ trong tuần
+  * mưa
+  * incident
+  * công trường
+  * pattern gần đây
+
+Tức là:
+**sản phẩm có thể chạy trước, AI đến sau.**
+
+Đây là điểm rất quan trọng để không bị mắc kẹt ở khâu “chờ đủ data mới có gì để dùng”.
+
+---
+
+## 4) “Báo trước là nên xuất phát sớm”
+
+Đây là feature mạnh nhất.
+
+Mình nghĩ đây mới là **giá trị cốt lõi**.
+
+Thay vì chỉ nói:
+
+* tuyến A đang kẹt
+
+App nên nói:
+
+* “Nếu muốn đến nơi lúc 8:30, hôm nay nên xuất phát lúc 7:42”
+* “Sớm hơn thường lệ 18 phút vì mưa và ùn tắc trên Xa Lộ Hà Nội”
+* “Nếu đợi đến 8:05, ETA tăng thêm 14 phút”
+
+Đây là output người dùng hiểu ngay.
+
+---
+
+## 5) “Gợi ý thời gian xuất phát cho đỡ kẹt”
+
+Rất đúng, và nên có 2 mode:
+
+### Mode A — đến đúng giờ
+
+Người dùng nhập:
+
+* muốn tới nơi lúc 8:30
+
+Hệ thống trả:
+
+* nên đi lúc 7:42
+* khoảng dao động an toàn: 7:38–7:45
+
+### Mode B — đi lúc ít kẹt nhất
+
+Người dùng hỏi:
+
+* trong 60 phút tới đi lúc nào tối ưu?
+
+Hệ thống trả:
+
+* đi lúc 8:50 sẽ nhanh hơn đi ngay 12 phút
+
+Cái này rất hợp với dữ liệu forecast từ provider hoặc model nội bộ.
+
+---
+
+## 6) Thu thập thời tiết, tai nạn, công trường
+
+Đúng, đây là feature cực quan trọng.
+
+Thứ tự ưu tiên:
+
+### Bắt buộc
+
+* giờ trong ngày
+* thứ trong tuần
+* mưa / lượng mưa
+* ngày lễ / cuối tuần
+
+### Rất nên có
+
+* tai nạn
+* công trường
+* đường cấm / phân luồng tạm
+* ngập
+
+### Nếu có thêm thì tốt
+
+* sự kiện đông người
+* tan học / tan ca
+* container peak quanh cảng
+
+---
+
+## 7) “TNGT và công trường: cào tin tức + admin cập nhật”
+
+Làm được, nhưng mình sẽ **không đặt scraping tin tức làm lõi chính**.
+
+Nên tách ra:
+
+### Nguồn 1 — nguồn cấu trúc
+
+* weather API
+* traffic incident API nếu có
+* road closure / roadwork feed nếu kiếm được
+
+### Nguồn 2 — admin cập nhật thủ công
+
+* đây là cách rất thực dụng
+* admin có thể nhập:
+
+  * “Nguyễn Duy Trinh thi công từ 22/4 đến 8/5”
+  * “Tai nạn tại nút X lúc 7:15”
+  * “Ngập đoạn Y”
+
+### Nguồn 3 — cào tin tức
+
+* dùng như nguồn phụ
+* NLP để extract:
+
+  * tuyến nào
+  * thời gian nào
+  * mức độ ảnh hưởng
+* nhưng độ nhiễu sẽ cao, cần moderation
+
+Mình sẽ không tin 100% vào scraping báo chí vì:
+
+* chậm
+* thiếu cấu trúc
+* khó map chính xác vào segment
+* nhiều tin chỉ mang tính mô tả
+
+Nói ngắn:
+**admin update nên là nguồn đáng tin hơn scraping.**
+
+---
+
+## Mô hình sản phẩm mình thấy hợp nhất
+
+### Input
+
+* danh sách tuyến A-B người dùng quan tâm
+* lịch đến nơi mong muốn
+* dữ liệu traffic theo thời gian
+* weather
+* incident
+* roadwork
+* admin notes
+
+### Engine
+
+* baseline forecast hoặc provider forecast
+* sau đó thêm AI model riêng
+
+### Output
+
+* nên xuất phát lúc mấy giờ
+* đi ngay hay chờ thêm
+* lý do hôm nay chậm
+* route thay thế nếu có
+* độ tin cậy dự báo
+
+---
+
+## Mình đề xuất MVP như này
+
+### Bản 1
+
+* user tạo 5 tuyến A-B
+* hệ thống polling travel time mỗi 10–15 phút
+* lưu lịch sử
+* rule engine:
+
+  * so với lịch sử cùng giờ
+  * cộng ảnh hưởng weather/admin incidents
+* output:
+
+  * “đi sớm X phút”
+  * “khung giờ đẹp trong 60 phút tới”
+
+### Bản 2
+
+* train model dự báo 15p/30p/60p
+* thêm notification
+* thêm lý do giải thích
+
+### Bản 3
+
+* route alternatives
+* multi-user learning
+* clustering các tuyến tương tự
+* dashboard cho admin
+
+---
+
+## Có một chỉnh sửa mình khuyên rất mạnh
+
+Thay vì:
+
+* “nhập các con đường hay đi”
+
+hãy làm:
+
+* **“nhập các hành trình hay đi”**
+
+Vì người dùng sống theo hành trình, không sống theo tên đường.
+
+---
+
+## Rủi ro chính
+
+Có 4 rủi ro bạn nên biết sớm:
+
+### 1) Data vendor cost
+
+Nếu polling nhiều user và nhiều tuyến, tiền API tăng nhanh.
+
+### 2) Cold start
+
+User mới chưa có data cá nhân.
+
+Cách xử lý:
+
+* dùng pattern chung theo khu vực + giờ
+* sau đó cá nhân hóa dần
+
+### 3) Incident data bẩn
+
+Tin tức cào về có thể sai, trễ, mơ hồ.
+
+### 4) Forecast explainability
+
+Người dùng sẽ tin hơn nếu app giải thích:
+
+* “mưa + công trường + giờ cao điểm”
+  thay vì chỉ đưa ra một con số.
+
+---
+
+## Chốt lại
+
+Mình thấy ý tưởng này **khá tốt** vì:
+
+* rõ value
+* gần hành vi người dùng
+* không cần giải bài toán “smart city” quá to
+* có thể ra MVP trước khi AI hoàn thiện
+
+Và mình sẽ định nghĩa nó như sau:
+
+**Một app assistant dự báo thời gian xuất phát cho các hành trình cá nhân, dựa trên lịch sử travel time + traffic forecast + thời tiết + sự cố/công trường.**
+
+Đây là framing mình thấy mạnh nhất.
+
+Nếu muốn, mình sẽ vẽ luôn cho bạn **kiến trúc hệ thống MVP** gồm:
+
+* database schema
+* cron polling
+* model forecast
+* admin panel incident/roadwork
+* notification logic “nên đi lúc mấy giờ”.
+
+# References
+
+https://www.perplexity.ai/search/cach-co-data-mat-do-giao-o-thu-u9M5wHtzQHuIteCTMULsuw#7
+
+
+
+https://chatgpt.com/share/e/69ca8be3-e47c-8004-9a60-18affa3e810b
