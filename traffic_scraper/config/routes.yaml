@@ -1,0 +1,136 @@
+# Traffic Scraper Configuration
+# Route definitions for 10 key routes in Thu Duc, Ho Chi Minh City
+
+routes:
+  - id: route_001
+    name: "Phạm Văn Đồng"
+    origin:
+      lat: 10.862
+      lng: 106.775
+    destination:
+      lat: 10.835
+      lng: 106.782
+    distance_km: 3
+    description: "Tuyến cao tốc đông nhất"
+
+  - id: route_002
+    name: "Xa Lộ Hà Nội"
+    origin:
+      lat: 10.825
+      lng: 106.782
+    destination:
+      lat: 10.795
+      lng: 106.785
+    distance_km: 3.5
+    description: "Ùn tắc cao điểm"
+
+  - id: route_003
+    name: "Quốc Lộ 1A"
+    origin:
+      lat: 10.830
+      lng: 106.750
+    destination:
+      lat: 10.820
+      lng: 106.740
+    distance_km: 1.2
+    description: "Kết nối Thủ Đức - Bình Thạnh"
+
+  - id: route_004
+    name: "Mai Chí Thọ"
+    origin:
+      lat: 10.802
+      lng: 106.730
+    destination:
+      lat: 10.785
+      lng: 106.745
+    distance_km: 2
+    description: "Khu Phú Mỹ Hưng gần Thủ Đức"
+
+  - id: route_005
+    name: "Lê Đức Thọ"
+    origin:
+      lat: 10.845
+      lng: 106.760
+    destination:
+      lat: 10.825
+      lng: 106.765
+    distance_km: 2.3
+    description: "Khu công nghệ cao"
+
+  - id: route_006
+    name: "Nguyễn Duy Trinh"
+    origin:
+      lat: 10.810
+      lng: 106.750
+    destination:
+      lat: 10.790
+      lng: 106.755
+    distance_km: 2.4
+    description: "Khu đô thị mới"
+
+  - id: route_007
+    name: "Đỗ Xuân Hợp"
+    origin:
+      lat: 10.835
+      lng: 106.740
+    destination:
+      lat: 10.815
+      lng: 106.745
+    distance_km: 2.5
+    description: "Khu chung cư cao cấp"
+
+  - id: route_008
+    name: "Lý Thường Kiệt"
+    origin:
+      lat: 10.850
+      lng: 106.770
+    destination:
+      lat: 10.835
+      lng: 106.775
+    distance_km: 1.8
+    description: "Khu trường học"
+
+  - id: route_009
+    name: "Võ Nguyên Giáp"
+    origin:
+      lat: 10.840
+      lng: 106.780
+    destination:
+      lat: 10.820
+      lng: 106.785
+    distance_km: 2.6
+    description: "Khu cảng Cát Lái"
+
+  - id: route_010
+    name: "Phú Mỹ Hưng - Nguyễn Văn Linh"
+    origin:
+      lat: 10.755
+      lng: 106.680
+    destination:
+      lat: 10.735
+      lng: 106.690
+    distance_km: 2.8
+    description: "Khu Nam Sài Gòn"
+
+# Scraper configuration
+scraper:
+  interval_minutes: 15
+  collection_days: 7
+  api_provider: "tomtom"
+  polling_start_time: "00:00"
+  polling_end_time: "23:45"
+
+# Data storage configuration
+storage:
+  data_dir: "data/scraped_data"
+  reports_dir: "data/reports"
+  failed_routes_file: "data/failed_routes.csv"
+  daily_file_prefix: "traffic_data"
+  summary_file_prefix: "summary"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "json"
+  rotation: "daily"
+  retention_days: 7
