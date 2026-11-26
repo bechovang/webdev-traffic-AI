@@ -1,15 +1,20 @@
 """Main entry point for Traffic Scraper."""
 
 import sys
+from pathlib import Path
 
-from src.config.settings import get_config
-from src.logger import get_logger, setup_logger
-from src.scheduler import TrafficScheduler
+# Ensure project root (traffic_scraper/) is on sys.path when run as `python src/main.py`
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config.settings import get_config  # noqa: E402
+from src.logger import setup_logger  # noqa: E402
+from src.scheduler import TrafficScheduler  # noqa: E402
 
 
-def main():
+def main() -> None:
     """Main entry point for the traffic scraper application."""
-    # Initialize configuration
     try:
         config = get_config()
     except Exception as e:
@@ -19,30 +24,23 @@ def main():
         print("2. config/routes.yaml exists with valid route definitions")
         sys.exit(1)
 
-    # Setup logger
-    log_level = config.log_level or "INFO"
     logger = setup_logger(
         name="traffic_scraper",
-        level=log_level,
-        log_dir=config.logs_dir,
+        level=config.log_level or "INFO",
+        log_dir=str(config.base_dir / config.logs_dir),
         format_json=True,
     )
-
-    # Log startup
     logger.info("Traffic Scraper starting...")
 
+    scheduler = TrafficScheduler(config=config)
     try:
-        # Create and start scheduler
-        scheduler = TrafficScheduler()
         scheduler.start()
-
-        # Run forever
         scheduler.run_forever()
-
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt")
         scheduler.stop()
-
+    except SystemExit:
+        raise
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}", exc_info=True)
         sys.exit(1)

@@ -1,8 +1,7 @@
 """Data models and schemas for traffic scraper."""
 
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional
+from typing import Dict
 
 
 @dataclass
@@ -42,10 +41,10 @@ class TrafficData:
     current_speed: float  # km/h
     free_flow_speed: float  # km/h
     travel_time_seconds: int
-    congestion_level: str  # A, B, C, D, E, F
+    congestion_level: str  # Very Low, Low, Moderate, High, Very High, Extreme
     los: str  # Level of Service (A-F)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, object]:
         """Convert to dictionary for CSV writing."""
         return {
             "timestamp": self.timestamp,
@@ -64,27 +63,13 @@ class TrafficData:
 
     def to_csv_row(self) -> str:
         """Convert to CSV row string."""
-        values = [
-            self.timestamp,
-            self.route_id,
-            self.route_name,
-            str(self.origin_lat),
-            str(self.origin_lng),
-            str(self.dest_lat),
-            str(self.dest_lng),
-            str(self.current_speed),
-            str(self.free_flow_speed),
-            str(self.travel_time_seconds),
-            self.congestion_level,
-            self.los,
-        ]
-        return ",".join(values)
+        return ",".join(str(v) for v in self.to_dict().values())
 
 
 class LOS_LEVELS:
     """Level of Service (LOS) classification thresholds.
 
-    Based on congestion_ratio = current_speed / free_flow_speed
+    Based on congestion_ratio = current_speed / free_flow_speed.
     """
 
     A = {"min_ratio": 0.9, "description": "Thông thoáng"}
@@ -95,50 +80,36 @@ class LOS_LEVELS:
     F = {"min_ratio": 0.0, "description": "Kẹt xe nặng"}
 
 
+LOS_CONGESTION_MAP = {
+    "A": "Very Low",
+    "B": "Low",
+    "C": "Moderate",
+    "D": "High",
+    "E": "Very High",
+    "F": "Extreme",
+}
+
+
 def calculate_los(congestion_ratio: float) -> str:
-    """Calculate Level of Service (LOS) from congestion ratio.
-
-    Args:
-        congestion_ratio: Ratio of current_speed to free_flow_speed
-
-    Returns:
-        LOS level (A-F)
-    """
+    """Calculate Level of Service (LOS) from congestion ratio."""
     if congestion_ratio >= LOS_LEVELS.A["min_ratio"]:
         return "A"
-    elif congestion_ratio >= LOS_LEVELS.B["min_ratio"]:
+    if congestion_ratio >= LOS_LEVELS.B["min_ratio"]:
         return "B"
-    elif congestion_ratio >= LOS_LEVELS.C["min_ratio"]:
+    if congestion_ratio >= LOS_LEVELS.C["min_ratio"]:
         return "C"
-    elif congestion_ratio >= LOS_LEVELS.D["min_ratio"]:
+    if congestion_ratio >= LOS_LEVELS.D["min_ratio"]:
         return "D"
-    elif congestion_ratio >= LOS_LEVELS.E["min_ratio"]:
+    if congestion_ratio >= LOS_LEVELS.E["min_ratio"]:
         return "E"
-    else:
-        return "F"
+    return "F"
 
 
 def calculate_congestion_level(los: str) -> str:
-    """Get congestion level description from LOS.
-
-    Args:
-        los: Level of Service (A-F)
-
-    Returns:
-        Congestion level description
-    """
-    los_map = {
-        "A": "Very Low",
-        "B": "Low",
-        "C": "Moderate",
-        "D": "High",
-        "E": "Very High",
-        "F": "Extreme",
-    }
-    return los_map.get(los, "Unknown")
+    """Get congestion level description from LOS."""
+    return LOS_CONGESTION_MAP.get(los, "Unknown")
 
 
-# CSV headers for output files
 CSV_HEADERS = [
     "timestamp",
     "route_id",
@@ -154,7 +125,6 @@ CSV_HEADERS = [
     "los",
 ]
 
-# CSV headers for failed routes
 FAILED_ROUTES_HEADERS = [
     "timestamp",
     "route_id",

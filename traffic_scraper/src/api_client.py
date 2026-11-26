@@ -1,6 +1,5 @@
 """TomTom API client with retry logic for traffic scraper."""
 
-import logging
 from typing import Dict
 
 import requests
@@ -11,8 +10,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.models import APIResponse, calculate_congestion_level, calculate_los
 from src.logger import get_logger
+from src.models import APIResponse, calculate_congestion_level, calculate_los
 
 logger = get_logger()
 
@@ -20,26 +19,25 @@ logger = get_logger()
 class TomTomAPIError(Exception):
     """Custom exception for TomTom API errors."""
 
-    pass
-
 
 class TrafficAPIClient:
     """TomTom Traffic API client with automatic retry logic."""
 
     def __init__(self, api_key: str):
-        """Initialize API client.
-
-        Args:
-            api_key: TomTom API key
-        """
+        """Initialize API client."""
         self.api_key = api_key
         self.base_url = "https://api.tomtom.com/routing/1/calculateRoute"
         self.session = requests.Session()
+
+    def close(self) -> None:
+        """Close the underlying HTTP session."""
+        self.session.close()
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),
         retry=retry_if_exception_type((requests.exceptions.RequestException,)),
+        reraise=True,
     )
     def fetch_route_data(
         self,
@@ -49,33 +47,14 @@ class TrafficAPIClient:
         dest_lat: float,
         dest_lng: float,
     ) -> APIResponse:
-        """Fetch traffic data for a single route from TomTom API.
-
-        Args:
-            route_id: Route identifier
-            origin_lat: Origin latitude
-            origin_lng: Origin longitude
-            dest_lat: Destination latitude
-            dest_lng: Destination longitude
-
-        Returns:
-            APIResponse object with traffic data
-
-        Raises:
-            TomTomAPIError: If API call fails after all retries
-        """
-        # Construct coordinates string
+        """Fetch traffic data for a single route from TomTom API."""
         origin = f"{origin_lat},{origin_lng}"
         destination = f"{dest_lat},{dest_lng}"
-
-        # Build URL
         url = f"{self.base_url}/{origin}:{destination}/json"
-
-        # Query parameters
         params = {
             "key": self.api_key,
-            "traffic": "true",  # Include traffic data
-            "avoid": "ferries",  # Avoid ferries for more accurate routing
+            "traffic": "true",
+            "avoid": "ferries",
         }
 
         logger.debug(
@@ -90,16 +69,13 @@ class TrafficAPIClient:
         try:
             response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
-
             data = response.json()
 
-            # Parse response
             routes = data.get("routes", [])
             if not routes:
                 raise TomTomAPIError(f"No routes found in API response for {route_id}")
 
             summary = routes[0].get("summary", {})
-
             distance_meters = summary.get("lengthInMeters", 0)
             travel_time_seconds = summary.get("travelTimeInSeconds", 0)
             traffic_time_seconds = summary.get("trafficTimeInSeconds", travel_time_seconds)
@@ -124,22 +100,21 @@ class TrafficAPIClient:
                     "traffic_time_seconds": traffic_time_seconds,
                 },
             )
-
             return api_response
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                logger.error(f"Authentication failed: Invalid API key")
+            status_code = e.response.status_code if e.response is not None else response.status_code
+            if status_code == 401:
+                logger.error("Authentication failed: Invalid API key")
                 raise TomTomAPIError("Invalid TomTom API key") from e
-            elif e.response.status_code == 403:
-                logger.error(f"Forbidden: API key does not have access to this resource")
+            if status_code == 403:
+                logger.error("Forbidden: API key does not have access to this resource")
                 raise TomTomAPIError("API key lacks required permissions") from e
-            elif e.response.status_code == 429:
+            if status_code == 429:
                 logger.warning(f"Rate limit exceeded for {route_id}")
                 raise TomTomAPIError("API rate limit exceeded") from e
-            else:
-                logger.error(f"HTTP error: {e.response.status_code}")
-                raise TomTomAPIError(f"HTTP error: {e.response.status_code}") from e
+            logger.error(f"HTTP error: {status_code}")
+            raise TomTomAPIError(f"HTTP error: {status_code}") from e
 
         except requests.exceptions.Timeout:
             logger.warning(f"Request timeout for {route_id}")
@@ -149,7 +124,7 @@ class TrafficAPIClient:
             logger.warning(f"Request failed for {route_id}: {str(e)}")
             raise
 
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.error(f"Failed to parse API response for {route_id}: {str(e)}")
             raise TomTomAPIError(f"Invalid API response format: {str(e)}") from e
 
@@ -162,32 +137,16 @@ class TrafficAPIClient:
         dest_lat: float,
         dest_lng: float,
     ) -> Dict:
-        """Calculate traffic metrics from API response.
+        """Calculate speed, congestion ratio, and LOS metrics from an APIResponse."""
+        if api_response.traffic_time_seconds <= 0 or api_response.travel_time_seconds <= 0:
+            raise TomTomAPIError(
+                f"Invalid travel/traffic duration for {api_response.route_id}"
+            )
 
-        Args:
-            api_response: API response object
-            route_name: Human-readable route name
-            origin_lat: Origin latitude
-            origin_lng: Origin longitude
-            dest_lat: Destination latitude
-            dest_lng: Destination longitude
+        current_speed = (api_response.distance_meters / api_response.traffic_time_seconds) * 3.6
+        free_flow_speed = (api_response.distance_meters / api_response.travel_time_seconds) * 3.6
 
-        Returns:
-            Dictionary with calculated traffic metrics
-        """
-        # Calculate speeds
-        # speed (km/h) = (distance_m / time_s) * 3.6
-        current_speed = (
-            api_response.distance_meters / api_response.traffic_time_seconds
-        ) * 3.6
-        free_flow_speed = (
-            api_response.distance_meters / api_response.travel_time_seconds
-        ) * 3.6
-
-        # Calculate congestion ratio
-        congestion_ratio = current_speed / free_flow_speed if free_flow_speed > 0 else 0
-
-        # Calculate LOS
+        congestion_ratio = current_speed / free_flow_speed if free_flow_speed > 0 else 0.0
         los = calculate_los(congestion_ratio)
         congestion_level = calculate_congestion_level(los)
 

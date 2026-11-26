@@ -80,7 +80,7 @@ class TestTrafficAPIClient:
                 dest_lng=106.782,
             )
 
-        assert "Invalid API key" in str(exc_info.value)
+        assert "Invalid TomTom API key" in str(exc_info.value)
 
     @patch("src.api_client.requests.Session.get")
     def test_fetch_route_data_429_rate_limit(self, mock_get, api_client):
@@ -129,15 +129,15 @@ class TestTrafficAPIClient:
         # Calculate expected values
         # current_speed = (3000 / 480) * 3.6 = 22.5 km/h
         # free_flow_speed = (3000 / 300) * 3.6 = 36.0 km/h
-        # congestion_ratio = 22.5 / 36.0 = 0.625 -> LOS = D
+        # congestion_ratio = 22.5 / 36.0 = 0.625 -> LOS = C (>= 0.6)
 
         assert metrics["route_id"] == "route_001"
         assert metrics["route_name"] == "Test Route"
         assert metrics["current_speed"] == 22.5
         assert metrics["free_flow_speed"] == 36.0
         assert metrics["travel_time_seconds"] == 480
-        assert metrics["los"] == "D"
-        assert metrics["congestion_level"] == "High"
+        assert metrics["los"] == "C"
+        assert metrics["congestion_level"] == "Moderate"
 
     def test_calculate_traffic_metrics_free_flow(self, api_client, mock_api_response):
         """Test metrics calculation with no congestion."""

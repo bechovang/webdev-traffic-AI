@@ -1,51 +1,38 @@
-# Web Development Project
+# Web Development — Data Traffic HCM
 
-Dự án phát triển web với tích hợp API và phân tích dữ liệu giao thông.
+Dự án thu thập và phân tích dữ liệu giao thông theo thời gian thực tại khu vực **TP. Thủ Đức, TP. Hồ Chí Minh**, sử dụng **TomTom Routing API** để làm nền tảng dữ liệu cho các bài toán phân tích và dự đoán tình trạng giao thông.
 
-## Tên dự án
-Web Development - Data Traffic HCM
+## Cấu trúc dự án
 
-## Mô tả
-Dự án tập trung vào phân tích dữ liệu giao thông tại Thành phố Hồ Chí Minh với tích hợp các dịch vụ API bên thứ ba như TomTom API và DigitalOcean.
-
-## Thư mục chính
-- `data traffic hcm/` - Dữ liệu giao thông HCM (nodes, segments, streets, training data)
-- `digitalOceanCLI_docs/` - Tài liệu DigitalOcean CLI
-- `tomtom api docs/` - Tài liệu TomTom API
-- `docs/` - Tài liệu dự án
-- `my_plan/` - Kế hoạch phát triển
-
-## Công nghệ sử dụng
-- Web Development
-- API Integration (TomTom API, DigitalOcean)
-- Data Analysis
-
-## Cài đặt
-```bash
-# Clone repository
-git clone <repository-url>
-cd webdev
-
-# Cài đặt dependencies (nếu có)
-npm install
+```text
+webdev-traffic-AI/
+├── traffic_scraper/            # Ứng dụng Python thu thập dữ liệu giao thông tự động
+│   ├── config/                 # Cấu hình tuyến đường (routes.yaml) & nạp env (settings.py)
+│   ├── docs/                   # Tài liệu kỹ thuật chi tiết (TECH_DOCS.md)
+│   ├── src/                    # Mã nguồn chính (API client, processor, scheduler, logger)
+│   ├── tests/                  # Unit tests (pytest)
+│   ├── pyproject.toml          # Cấu hình project & pytest
+│   ├── requirements.txt        # Danh sách thư viện Python
+│   └── .env.example            # Mẫu biến môi trường
+├── _bmad-output/               # Tài liệu kiến trúc ban đầu (architecture.md)
+├── my_plan/                    # Ghi chú nghiên cứu & ý tưởng thu thập dữ liệu
+└── README.md
 ```
 
-## Sử dụng
+## Bắt đầu nhanh
+
+Xem hướng dẫn cài đặt và chạy tại [traffic_scraper/README.md](traffic_scraper/README.md) và tài liệu kỹ thuật đầy đủ tại [traffic_scraper/docs/TECH_DOCS.md](traffic_scraper/docs/TECH_DOCS.md).
+
 ```bash
-# Chạy dự án
-npm start
+cd traffic_scraper
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # Điền TOMTOM_API_KEY
+python src/main.py
 ```
-
-## Tài liệu
-- Xem thư mục `docs/` để biết thêm chi tiết
-- Xem `digitalOceanCLI_docs/` và `tomtom api docs/` để hiểu về tích hợp API
-
-## Đóng góp
-Mọi đóng góp đều được chào đón. Vui lòng tạo pull request để đóng góp.
 
 ## Giấy phép
-MIT License
 
-## Liên hệ
-- Email: [your-email@example.com]
-- GitHub: [your-username]
+MIT License

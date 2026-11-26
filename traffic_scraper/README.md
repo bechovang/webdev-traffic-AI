@@ -1,103 +1,89 @@
 # Traffic Scraper
 
-Automated traffic data collection system for Thu Duc, Ho Chi Minh City. Polls TomTom Routing API every 15 minutes for 7 days across 10 key routes.
+Hệ thống thu thập dữ liệu giao thông tự động cho khu vực **TP. Thủ Đức, TP. Hồ Chí Minh**, gọi **TomTom Routing API** định kỳ mỗi 15 phút trong 7 ngày trên 10 tuyến đường trọng điểm.
 
-## Features
+> Xem tài liệu kỹ thuật chi tiết tại [docs/TECH_DOCS.md](docs/TECH_DOCS.md).
 
-- **10 Key Routes**: Monitors major traffic corridors in Thu Duc
-- **15-Minute Polling**: Consistent data collection intervals
-- **7-Day Continuous Run**: Fault-tolerant, auto-recovery system
-- **TomTom API Integration**: Real-time traffic data with retry logic
-- **CSV Storage**: Daily data files with validated schema
-- **JSON Logging**: Structured logs for debugging and monitoring
+## Tính năng chính
 
-## Tech Stack
+- **10 tuyến đường trọng điểm**: Giám sát các trục đường chính tại Thủ Đức và khu vực lân cận.
+- **Polling định kỳ (15 phút)**: Thu thập dữ liệu chuỗi thời gian nhất quán qua `APScheduler`.
+- **Giới hạn chu kỳ thu thập**: Hỗ trợ tự động dừng sau số ngày cấu hình (`COLLECTION_DAYS`, mặc định 7 ngày).
+- **TomTom API + Retry**: Tự động thử lại với exponential backoff (`tenacity`) khi gặp lỗi mạng/timeout.
+- **Lưu trữ CSV & Dead Letter Queue**: Lưu dữ liệu hợp lệ theo ngày và ghi lại các tuyến lỗi để theo dõi.
+- **Structured JSON Logging**: Ghi log JSON xoay vòng theo ngày, lưu tối đa 7 ngày.
+
+## Công nghệ sử dụng
 
 - Python 3.11+
-- `requests` - HTTP client
-- `tenacity` - Retry logic with exponential backoff
-- `APScheduler` - Task scheduling
-- `pyyaml` - Configuration management
+- `requests` — HTTP client
+- `tenacity` — Retry với exponential backoff
+- `APScheduler` — Lập lịch tác vụ nền
+- `pyyaml` & `python-dotenv` — Quản lý cấu hình & biến môi trường
+- `pytest` & `pytest-mock` — Kiểm thử đơn vị
 
-## Installation
+## Cài đặt
 
 ```bash
-# Clone repository
-git clone <repository-url>
 cd traffic_scraper
 
-# Create virtual environment
-python3.11 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Tạo virtual environment
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
 
-# Install dependencies
+# Cài đặt dependencies
 pip install -r requirements.txt
 ```
 
-## Configuration
+## Cấu hình
 
-1. **Get TomTom API Key**: Register at https://developer.tomtom.com/
+1. Đăng ký API key miễn phí tại [TomTom Developer Portal](https://developer.tomtom.com/).
+2. Tạo file `.env` từ mẫu:
+   ```bash
+   cp .env.example .env
+   ```
+   Cập nhật `TOMTOM_API_KEY` trong `.env`.
+3. Tuỳ chỉnh danh sách tuyến đường hoặc chu kỳ trong `config/routes.yaml`.
 
-2. **Set up environment**:
-```bash
-cp .env.example .env
-# Edit .env and add your TOMTOM_API_KEY
-```
+## Sử dụng
 
-3. **Configure routes**: Edit `config/routes.yaml` to add/modify routes
-
-## Usage
-
-**Start the scraper**:
+**Khởi chạy scraper:**
 ```bash
 python src/main.py
 ```
 
-**Run tests**:
+**Chạy unit tests:**
 ```bash
-pytest tests/
+pytest
 ```
 
-**Run with specific log level**:
+**Chạy với mức log DEBUG:**
 ```bash
 LOG_LEVEL=DEBUG python src/main.py
 ```
 
-## Project Structure
+## Cấu trúc thư mục
 
-```
+```text
 traffic_scraper/
 ├── config/
-│   ├── routes.yaml      # Route definitions
-│   └── settings.py      # Config loader
+│   ├── routes.yaml         # Định nghĩa 10 tuyến đường & tham số scraper
+│   └── settings.py         # Config loader & validator
+├── docs/
+│   └── TECH_DOCS.md        # Tài liệu kỹ thuật chi tiết
 ├── src/
-│   ├── main.py          # Entry point
-│   ├── api_client.py    # TomTom API client
-│   ├── data_processor.py # Data validation & storage
-│   ├── scheduler.py     # APScheduler orchestration
-│   ├── models.py        # Data models
-│   └── logger.py        # Logging setup
-├── tests/               # Unit tests
-├── data/
-│   ├── scraped_data/    # Daily CSV files
-│   └── reports/         # Summary reports
-└── logs/                # Log files
+│   ├── main.py             # Entry point
+│   ├── api_client.py       # TomTom API client & tính toán chỉ số
+│   ├── data_processor.py   # Validate, deduplicate, ghi CSV & DLQ
+│   ├── scheduler.py        # APScheduler orchestration
+│   ├── models.py           # Data models & công thức LOS (A–F)
+│   └── logger.py           # Structured JSON logger
+├── tests/                  # Unit tests
+├── pyproject.toml          # Cấu hình project & pytest
+└── requirements.txt
 ```
 
-## Data Format
-
-**CSV Schema**:
-- `timestamp` - ISO8601 with timezone
-- `route_id` - Route identifier
-- `route_name` - Human-readable name
-- `origin_lat`, `origin_lng` - Start coordinates
-- `dest_lat`, `dest_lng` - End coordinates
-- `current_speed` - Current speed (km/h)
-- `free_flow_speed` - Free flow speed (km/h)
-- `travel_time_seconds` - Travel time
-- `congestion_level` - A-F LOS classification
-- `los` - Level of Service
-
-## License
+## Giấy phép
 
 MIT License

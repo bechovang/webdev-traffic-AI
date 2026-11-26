@@ -3,7 +3,7 @@
 import csv
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, Optional
 
 from src.logger import get_logger
 from src.models import CSV_HEADERS, FAILED_ROUTES_HEADERS, TrafficData
@@ -14,37 +14,19 @@ logger = get_logger()
 class ValidationError(Exception):
     """Custom exception for data validation errors."""
 
-    pass
-
 
 class DataProcessor:
     """Handle data validation and CSV storage for traffic data."""
 
-    def __init__(self, data_dir: str):
-        """Initialize data processor.
-
-        Args:
-            data_dir: Directory for storing CSV files
-        """
+    def __init__(self, data_dir: str, failed_routes_file: Optional[str] = None):
+        """Initialize data processor."""
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.failed_routes_file = failed_routes_file or "data/failed_routes.csv"
+        self._existing_records: set[str] = set()
 
-        # Track existing data for deduplication
-        self._existing_records = set()
-
-    def validate_record(self, record: Dict) -> TrafficData:
-        """Validate a traffic data record.
-
-        Args:
-            record: Dictionary with traffic data fields
-
-        Returns:
-            Validated TrafficData object
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        # Check required fields
+    def validate_record(self, record: Dict[str, Any]) -> TrafficData:
+        """Validate a traffic data record and return a TrafficData instance."""
         required_fields = [
             "timestamp",
             "route_id",
@@ -64,90 +46,62 @@ class DataProcessor:
             if field not in record:
                 raise ValidationError(f"Missing required field: {field}")
 
-        # Validate coordinates
         for field in ["origin_lat", "dest_lat"]:
             value = record[field]
-            if not isinstance(value, (int, float)) or not -90 <= value <= 90:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not -90 <= value <= 90:
                 raise ValidationError(f"Invalid {field}: {value}")
 
         for field in ["origin_lng", "dest_lng"]:
             value = record[field]
-            if not isinstance(value, (int, float)) or not -180 <= value <= 180:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not -180 <= value <= 180:
                 raise ValidationError(f"Invalid {field}: {value}")
 
-        # Validate speeds
         for field in ["current_speed", "free_flow_speed"]:
             value = record[field]
-            if not isinstance(value, (int, float)) or not 0 <= value <= 200:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 200:
                 raise ValidationError(f"Invalid {field}: {value}")
 
-        # Validate travel time
         travel_time = record["travel_time_seconds"]
-        if not isinstance(travel_time, int) or travel_time <= 0:
+        if isinstance(travel_time, bool) or not isinstance(travel_time, int) or travel_time <= 0:
             raise ValidationError(f"Invalid travel_time_seconds: {travel_time}")
 
-        # Validate LOS
         los = record["los"]
-        if los not in ["A", "B", "C", "D", "E", "F"]:
+        if los not in {"A", "B", "C", "D", "E", "F"}:
             raise ValidationError(f"Invalid LOS: {los}")
 
-        # Validate timestamp format
         try:
-            datetime.fromisoformat(record["timestamp"].replace("Z", "+00:00"))
-        except ValueError:
-            raise ValidationError(f"Invalid timestamp format: {record['timestamp']}")
+            datetime.fromisoformat(str(record["timestamp"]).replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValidationError(f"Invalid timestamp format: {record['timestamp']}") from exc
 
         return TrafficData(**record)
 
     def check_duplicate(self, record: TrafficData) -> bool:
-        """Check if record already exists (for deduplication).
-
-        Args:
-            record: TrafficData object to check
-
-        Returns:
-            True if duplicate, False otherwise
-        """
-        # Create unique key: route_id + timestamp
+        """Check if record already exists in the current session."""
         key = f"{record.route_id}_{record.timestamp}"
-
         if key in self._existing_records:
             logger.warning(f"Duplicate record detected: {key}")
             return True
-
         self._existing_records.add(key)
         return False
 
     def save_to_csv(self, record: TrafficData) -> str:
-        """Save a single traffic data record to CSV file.
+        """Save a single traffic data record to its daily CSV file."""
+        try:
+            record_dt = datetime.fromisoformat(record.timestamp.replace("Z", "+00:00"))
+        except ValueError:
+            record_dt = datetime.now()
 
-        Args:
-            record: Validated TrafficData object
-
-        Returns:
-            Path to CSV file
-
-        Raises:
-            IOError: If file write fails
-        """
-        # Generate daily filename
-        date_str = datetime.now().strftime("%Y%m%d")
-        filename = f"traffic_data_{date_str}.csv"
-        filepath = self.data_dir / filename
-
-        # Check if file exists
+        date_str = record_dt.strftime("%Y%m%d")
+        filepath = self.data_dir / f"traffic_data_{date_str}.csv"
         file_exists = filepath.exists()
 
         try:
             with open(filepath, "a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-
-                # Write header if new file
                 if not file_exists:
                     writer.writerow(CSV_HEADERS)
-
-                # Write data row
-                writer.writerow(record.to_csv_row().split(","))
+                writer.writerow(list(record.to_dict().values()))
 
             logger.info(
                 "Saved traffic data to CSV",
@@ -157,7 +111,6 @@ class DataProcessor:
                     "congestion_level": record.congestion_level,
                 },
             )
-
             return str(filepath)
 
         except IOError as e:
@@ -171,33 +124,20 @@ class DataProcessor:
         error_type: str,
         error_message: str,
         retry_attempts: int,
-        failed_routes_file: str = "data/failed_routes.csv",
+        failed_routes_file: Optional[str] = None,
     ) -> None:
-        """Log a failed route to the dead letter queue.
-
-        Args:
-            route_id: Route identifier
-            route_name: Human-readable route name
-            error_type: Type of error
-            error_message: Error message
-            retry_attempts: Number of retry attempts
-            failed_routes_file: Path to failed routes CSV file
-        """
-        filepath = Path(failed_routes_file)
+        """Log a failed route to the dead letter queue CSV file."""
+        filepath = Path(failed_routes_file or self.failed_routes_file)
         filepath.parent.mkdir(parents=True, exist_ok=True)
-
         file_exists = filepath.exists()
 
         try:
             with open(filepath, "a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-
-                # Write header if new file
                 if not file_exists:
                     writer.writerow(FAILED_ROUTES_HEADERS)
 
-                # Write failure record
-                timestamp = datetime.now().isoformat()
+                timestamp = datetime.now().astimezone().isoformat()
                 writer.writerow(
                     [timestamp, route_id, route_name, error_type, error_message, retry_attempts]
                 )
@@ -210,22 +150,13 @@ class DataProcessor:
                     "retry_attempts": retry_attempts,
                 },
             )
-
         except IOError as e:
             logger.error(f"Failed to write to failed routes file: {str(e)}")
 
-    def generate_daily_summary(self, date: datetime) -> Dict[str, int]:
-        """Generate daily summary statistics.
-
-        Args:
-            date: Date to generate summary for
-
-        Returns:
-            Dictionary with summary statistics
-        """
+    def generate_daily_summary(self, date: datetime) -> Dict[str, Any]:
+        """Generate daily summary statistics from the daily CSV file."""
         date_str = date.strftime("%Y%m%d")
-        filename = f"traffic_data_{date_str}.csv"
-        filepath = self.data_dir / filename
+        filepath = self.data_dir / f"traffic_data_{date_str}.csv"
 
         if not filepath.exists():
             return {
@@ -242,7 +173,7 @@ class DataProcessor:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
-                for row in reader:
+                for _ in reader:
                     total_polls += 1
 
             successful = total_polls - failed
@@ -255,7 +186,6 @@ class DataProcessor:
                 "failed": failed,
                 "success_rate": round(success_rate, 2),
             }
-
         except IOError as e:
             logger.error(f"Failed to read data file for summary: {str(e)}")
             return {
@@ -266,19 +196,13 @@ class DataProcessor:
                 "success_rate": 0.0,
             }
 
-    def save_daily_summary(self, summary: Dict[str, int], reports_dir: str) -> None:
-        """Save daily summary to CSV file.
-
-        Args:
-            summary: Summary statistics dictionary
-            reports_dir: Directory for summary reports
-        """
+    def save_daily_summary(self, summary: Dict[str, Any], reports_dir: str) -> None:
+        """Save daily summary to CSV file."""
         reports_path = Path(reports_dir)
         reports_path.mkdir(parents=True, exist_ok=True)
 
         date_str = summary["date"]
-        filename = f"summary_{date_str}.csv"
-        filepath = reports_path / filename
+        filepath = reports_path / f"summary_{date_str}.csv"
 
         try:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
@@ -287,6 +211,5 @@ class DataProcessor:
                 writer.writerow(summary.values())
 
             logger.info(f"Saved daily summary to {filepath}")
-
         except IOError as e:
             logger.error(f"Failed to write summary file: {str(e)}")

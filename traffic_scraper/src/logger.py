@@ -2,10 +2,28 @@
 
 import json
 import logging
-import os
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
+
+EXTRA_LOG_FIELDS = (
+    "route_id",
+    "current_speed",
+    "free_flow_speed",
+    "congestion_level",
+    "congestion_ratio",
+    "los",
+    "error_type",
+    "retry_attempts",
+    "total_polls",
+    "successful_polls",
+    "failed_polls",
+    "success_rate",
+    "interval_minutes",
+    "collection_days",
+    "num_routes",
+    "file",
+)
 
 
 def setup_logger(
@@ -14,48 +32,30 @@ def setup_logger(
     log_dir: str = "logs",
     format_json: bool = True,
 ) -> logging.Logger:
-    """Set up structured JSON logger for the application.
-
-    Args:
-        name: Logger name
-        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        log_dir: Directory for log files
-        format_json: Use JSON format for logs
-
-    Returns:
-        Configured logger instance
-    """
-    # Create logger
+    """Set up structured JSON logger for the application."""
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
-
-    # Remove existing handlers
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logger.setLevel(log_level)
     logger.handlers.clear()
 
-    # Create log directory if it doesn't exist
     log_path = Path(log_dir)
     log_path.mkdir(parents=True, exist_ok=True)
-
-    # Daily log file with date in filename
     log_file = log_path / f"scraper_{datetime.now().strftime('%Y%m%d')}.log"
 
-    # File handler with daily rotation
     file_handler = TimedRotatingFileHandler(
         log_file,
         when="midnight",
         interval=1,
-        backupCount=7,  # Keep 7 days of logs
+        backupCount=7,
         encoding="utf-8",
     )
-    file_handler.setLevel(getattr(logging, level.upper(), logging.INFO))
+    file_handler.setLevel(log_level)
 
-    # Console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(getattr(logging, level.upper(), logging.INFO))
+    console_handler.setLevel(log_level)
 
-    # Formatter
     if format_json:
-        formatter = JSONFormatter()
+        formatter: logging.Formatter = JSONFormatter()
     else:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -75,14 +75,7 @@ class JSONFormatter(logging.Formatter):
     """Custom JSON formatter for structured logging."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format log record as JSON.
-
-        Args:
-            record: Log record to format
-
-        Returns:
-            JSON-formatted log string
-        """
+        """Format log record as a JSON string."""
         log_data = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
             "level": record.levelname,
@@ -90,15 +83,10 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        # Add extra fields from record
-        if hasattr(record, "route_id"):
-            log_data["route_id"] = record.route_id
-        if hasattr(record, "current_speed"):
-            log_data["current_speed"] = record.current_speed
-        if hasattr(record, "congestion_level"):
-            log_data["congestion_level"] = record.congestion_level
+        for field in EXTRA_LOG_FIELDS:
+            if hasattr(record, field):
+                log_data[field] = getattr(record, field)
 
-        # Add exception info if present
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
@@ -106,12 +94,5 @@ class JSONFormatter(logging.Formatter):
 
 
 def get_logger(name: str = "traffic_scraper") -> logging.Logger:
-    """Get or create a logger instance.
-
-    Args:
-        name: Logger name
-
-    Returns:
-        Logger instance
-    """
+    """Get or create a logger instance."""
     return logging.getLogger(name)

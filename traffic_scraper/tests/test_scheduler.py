@@ -1,7 +1,11 @@
 """Unit tests for scheduler module."""
 
+import signal
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 from src.scheduler import TrafficScheduler
 
@@ -10,9 +14,27 @@ class TestTrafficScheduler:
     """Test suite for TrafficScheduler class."""
 
     @pytest.fixture
-    def scheduler(self):
+    def mock_config(self, tmp_path):
+        """Create a mock Config object without requiring .env."""
+        cfg = Mock()
+        cfg.tomtom_api_key = "test_key"
+        cfg.base_dir = tmp_path
+        cfg.data_dir = "data/test"
+        cfg.logs_dir = "logs/test"
+        cfg.routes = []
+        cfg.storage_config = {
+            "reports_dir": "data/reports",
+            "failed_routes_file": "data/failed_routes.csv",
+        }
+        cfg.ensure_directories = Mock()
+        cfg.get_interval_minutes = Mock(return_value=15)
+        cfg.get_collection_days = Mock(return_value=7)
+        return cfg
+
+    @pytest.fixture
+    def scheduler(self, mock_config):
         """Create scheduler instance for testing."""
-        return TrafficScheduler()
+        return TrafficScheduler(config=mock_config)
 
     def test_init(self, scheduler):
         """Test scheduler initialization."""
@@ -23,24 +45,17 @@ class TestTrafficScheduler:
         assert scheduler.successful_polls == 0
         assert scheduler.failed_polls == 0
 
-    @patch("src.scheduler.get_config")
     @patch("src.scheduler.TrafficAPIClient")
     @patch("src.scheduler.DataProcessor")
     @patch("src.scheduler.BackgroundScheduler")
     def test_start_success(
-        self, mock_scheduler_class, mock_processor_class, mock_client_class, mock_config
+        self,
+        mock_scheduler_class,
+        mock_processor_class,
+        mock_client_class,
+        mock_config,
     ):
         """Test successful scheduler start."""
-        # Setup mocks
-        mock_config_instance = Mock()
-        mock_config_instance.tomtom_api_key = "test_key"
-        mock_config_instance.data_dir = "data/test"
-        mock_config_instance.logs_dir = "logs/test"
-        mock_config_instance.routes = []
-        mock_config_instance.ensure_directories = Mock()
-        mock_config_instance.get_interval_minutes = Mock(return_value=15)
-        mock_config.return_value = mock_config_instance
-
         mock_scheduler_instance = Mock()
         mock_scheduler_instance.start = Mock()
         mock_scheduler_class.return_value = mock_scheduler_instance
@@ -51,59 +66,48 @@ class TestTrafficScheduler:
         mock_processor_instance = Mock()
         mock_processor_class.return_value = mock_processor_instance
 
-        # Create and start scheduler
-        scheduler = TrafficScheduler()
+        scheduler = TrafficScheduler(config=mock_config)
         scheduler.start()
 
-        # Verify initialization
         assert scheduler.api_client == mock_client_instance
         assert scheduler.data_processor == mock_processor_instance
-        mock_config_instance.ensure_directories.assert_called_once()
+        mock_config.ensure_directories.assert_called_once()
+        mock_scheduler_instance.add_job.assert_called_once()
+        mock_scheduler_instance.start.assert_called_once()
 
-    @patch("src.scheduler.BackgroundScheduler")
-    def test_signal_handler(self, mock_scheduler_class, scheduler):
+    def test_signal_handler(self, scheduler):
         """Test graceful shutdown on signal."""
         mock_scheduler_instance = Mock()
         mock_scheduler_instance.running = True
+        mock_scheduler_instance.shutdown = Mock()
         scheduler.scheduler = mock_scheduler_instance
 
-        # Simulate signal handler
-        import signal
+        with pytest.raises(SystemExit) as exc_info:
+            scheduler._signal_handler(signal.SIGINT, None)
 
-        scheduler._signal_handler(signal.SIGINT, None)
+        assert exc_info.value.code == 0
+        mock_scheduler_instance.shutdown.assert_called_once_with(wait=True)
 
-        # Verify shutdown was called
-        # Note: The actual stop() method calls sys.exit(), so we can't test it fully
-
-    @patch("src.scheduler.BackgroundScheduler")
-    def test_stop(self, mock_scheduler_class, scheduler):
+    def test_stop(self, scheduler):
         """Test scheduler stop method."""
         mock_scheduler_instance = Mock()
         mock_scheduler_instance.running = True
         mock_scheduler_instance.shutdown = Mock()
         scheduler.scheduler = mock_scheduler_instance
 
-        # Add some poll statistics
         scheduler.total_polls = 100
         scheduler.successful_polls = 95
         scheduler.failed_polls = 5
 
-        # Stop should trigger shutdown
         with pytest.raises(SystemExit) as exc_info:
             scheduler.stop()
 
         assert exc_info.value.code == 0
         mock_scheduler_instance.shutdown.assert_called_once_with(wait=True)
 
-    @patch("src.scheduler.get_config")
-    @patch("src.scheduler.BackgroundScheduler")
-    def test_poll_all_routes_success(
-        self, mock_scheduler_class, mock_config, scheduler
-    ):
+    def test_poll_all_routes_success(self, mock_config):
         """Test successful polling of all routes."""
-        # Setup mocks
-        mock_config_instance = Mock()
-        mock_config_instance.routes = [
+        mock_config.routes = [
             {
                 "id": "route_001",
                 "name": "Test Route 1",
@@ -111,9 +115,8 @@ class TestTrafficScheduler:
                 "destination": {"lat": 10.835, "lng": 106.782},
             }
         ]
-        mock_config.return_value = mock_config_instance
+        scheduler = TrafficScheduler(config=mock_config)
 
-        # Mock API client
         mock_api_response = Mock()
         mock_api_response.route_id = "route_001"
         mock_api_response.distance_meters = 3000
@@ -132,12 +135,11 @@ class TestTrafficScheduler:
             "current_speed": 22.5,
             "free_flow_speed": 36.0,
             "travel_time_seconds": 480,
-            "congestion_level": "High",
-            "los": "D",
+            "congestion_level": "Moderate",
+            "los": "C",
         }
         scheduler.api_client = mock_api_client
 
-        # Mock data processor
         mock_data_processor = Mock()
         mock_validated_data = Mock()
         mock_data_processor.validate_record.return_value = mock_validated_data
@@ -145,27 +147,16 @@ class TestTrafficScheduler:
         mock_data_processor.save_to_csv = Mock()
         scheduler.data_processor = mock_data_processor
 
-        # Run poll
         scheduler._poll_all_routes()
 
-        # Verify calls
         assert scheduler.total_polls == 1
         assert scheduler.successful_polls == 1
         assert scheduler.failed_polls == 0
         mock_api_client.fetch_route_data.assert_called_once()
         mock_data_processor.validate_record.assert_called_once()
 
-    @patch("src.scheduler.get_config")
-    def test_generate_daily_summary(self, mock_config, scheduler):
+    def test_generate_daily_summary(self, scheduler, mock_config):
         """Test daily summary generation."""
-        from datetime import datetime
-
-        # Setup mocks
-        mock_config_instance = Mock()
-        mock_config_instance.storage_config = {"reports_dir": "data/reports"}
-        mock_config.return_value = mock_config_instance
-
-        # Mock data processor
         mock_data_processor = Mock()
         mock_data_processor.generate_daily_summary.return_value = {
             "date": "20260409",
@@ -176,10 +167,12 @@ class TestTrafficScheduler:
         }
         scheduler.data_processor = mock_data_processor
 
-        # Generate summary
-        date = datetime(2026, 4, 9, 0, 5)  # 00:05 - should trigger summary
+        date = datetime(2026, 4, 9, 0, 5)
         scheduler._generate_daily_summary(date)
 
-        # Verify calls
         mock_data_processor.generate_daily_summary.assert_called_once_with(date)
-        mock_data_processor.save_daily_summary.assert_called_once()
+        expected_reports_dir = str(Path(mock_config.base_dir) / "data/reports")
+        mock_data_processor.save_daily_summary.assert_called_once_with(
+            mock_data_processor.generate_daily_summary.return_value,
+            expected_reports_dir,
+        )
