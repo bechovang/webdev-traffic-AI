@@ -49,6 +49,15 @@
   z-index: 1 !important;
 }
 
+/* Smooth tile scaling & momentum zoom */
+.leaflet-tile {
+  will-change: transform, opacity;
+}
+
+.leaflet-zoom-animated {
+  will-change: transform;
+}
+
 /* Glassmorphism utility for floating HUD overlays */
 .hud-glass {
   background: rgba(255, 255, 255, 0.88);

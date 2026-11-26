@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -9,6 +9,7 @@ import {
   useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
+import '@luomus/leaflet-smooth-wheel-zoom';
 import type { DynamicRoutePlanResult } from '../types';
 import { getTrafficToken, tokens } from '../tokens';
 import {
@@ -31,24 +32,36 @@ interface TrafficMapProps {
   onCancelMapPick: () => void;
 }
 
-// Controller to smoothly fit bounds when a route is planned
+// Controller to smoothly fit bounds when a route is planned (ONLY ONCE per route calculation)
 function RouteFitBoundsController({
   activeRoutePlan,
 }: {
   activeRoutePlan: DynamicRoutePlanResult | null;
 }) {
   const map = useMap();
+  const lastFittedSigRef = useRef<string>('');
+
   useEffect(() => {
-    if (activeRoutePlan && activeRoutePlan.geometry.length > 0) {
+    if (!activeRoutePlan || !activeRoutePlan.geometry || activeRoutePlan.geometry.length === 0) {
+      lastFittedSigRef.current = '';
+      return;
+    }
+
+    const sig = `${activeRoutePlan.origin.lat},${activeRoutePlan.origin.lng}->${activeRoutePlan.destination.lat},${activeRoutePlan.destination.lng}:${activeRoutePlan.distance_km}`;
+    
+    // Only fit bounds when a new route is calculated, NEVER during user zoom/pan
+    if (lastFittedSigRef.current !== sig) {
+      lastFittedSigRef.current = sig;
       const bounds = L.latLngBounds(activeRoutePlan.geometry.map(([lat, lng]) => [lat, lng]));
       map.fitBounds(bounds, {
         padding: [100, 100],
         maxZoom: 15,
         animate: true,
-        duration: 1.2,
+        duration: 1.0,
       });
     }
   }, [activeRoutePlan, map]);
+
   return null;
 }
 
@@ -144,7 +157,12 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
       <MapContainer
         center={mapCenter}
         zoom={12.5}
-        scrollWheelZoom={true}
+        scrollWheelZoom={false}
+        /* @ts-expect-error - smoothWheelZoom is extended by @luomus/leaflet-smooth-wheel-zoom */
+        smoothWheelZoom={true}
+        smoothSensitivity={1.2}
+        zoomSnap={0}
+        zoomDelta={0.25}
         zoomControl={false}
         className="w-full h-full"
       >
@@ -154,6 +172,9 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
           attribution={baseMapAttribution}
           url={baseMapUrl}
           maxZoom={19}
+          keepBuffer={12}
+          updateWhenZooming={false}
+          updateWhenIdle={false}
         />
 
         {/* TomTom Real-Time Traffic Flow Layer */}
@@ -165,6 +186,9 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
             opacity={0.82}
             zIndex={10}
             maxZoom={19}
+            keepBuffer={12}
+            updateWhenZooming={false}
+            updateWhenIdle={false}
           />
         )}
 
@@ -177,6 +201,9 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
             opacity={0.9}
             zIndex={11}
             maxZoom={19}
+            keepBuffer={8}
+            updateWhenZooming={false}
+            updateWhenIdle={false}
           />
         )}
 
