@@ -63,6 +63,8 @@ export interface PlaceSuggestion {
   address: string;
   lat: number;
   lng: number;
+  category?: 'transit' | 'education' | 'hospital' | 'shopping' | 'tech' | 'park' | 'general' | string;
+  distance_km?: number;
 }
 
 export interface DynamicRoutePlanRequest {

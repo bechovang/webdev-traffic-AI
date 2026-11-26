@@ -217,6 +217,8 @@ class PlaceSuggestion(BaseModel):
     address: str
     lat: float
     lng: float
+    category: Optional[str] = "general"
+    distance_km: Optional[float] = None
 
 
 class DynamicRoutePlanRequest(BaseModel):
