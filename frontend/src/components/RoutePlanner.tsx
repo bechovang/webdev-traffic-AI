@@ -30,44 +30,44 @@ interface RoutePlannerProps {
 // Popular locations in Thu Duc / Ho Chi Minh City for one-click route planning
 const POPULAR_PRESETS: PlaceSuggestion[] = [
   {
-    name: 'Chợ Thủ Đức',
-    address: 'Võ Văn Ngân, Linh Tây, TP. Thủ Đức',
+    name: 'Thu Duc Central Market',
+    address: 'Vo Van Ngan St, Linh Tay, Thu Duc City',
     lat: 10.8524,
     lng: 106.7578,
   },
   {
-    name: 'Khu Công Nghệ Cao (SHTP)',
-    address: 'Xa Lộ Hà Nội, Hiệp Phú, TP. Thủ Đức',
+    name: 'Saigon Hi-Tech Park (SHTP)',
+    address: 'Hanoi Highway, Hiep Phu, Thu Duc City',
     lat: 10.8550,
     lng: 106.7900,
   },
   {
-    name: 'Đại học Quốc Gia TP.HCM',
-    address: 'Khu Đô thị ĐHQG, Linh Trung, TP. Thủ Đức',
+    name: 'Vietnam National University (VNU)',
+    address: 'VNU Urban Area, Linh Trung, Thu Duc City',
     lat: 10.8750,
     lng: 106.8000,
   },
   {
-    name: 'Cầu Sài Gòn (Bình Thạnh ➔ Thủ Đức)',
-    address: 'Xa Lộ Hà Nội, An Phú, TP. Thủ Đức',
+    name: 'Saigon Bridge (Inbound to Center)',
+    address: 'Hanoi Highway, An Phu, Thu Duc City',
     lat: 10.7990,
     lng: 106.7230,
   },
   {
-    name: 'Hầm Thủ Thiêm',
-    address: 'Mai Chí Thọ, An Khánh, TP. Thủ Đức',
+    name: 'Thu Thiem Tunnel Entrance',
+    address: 'Mai Chi Tho Blvd, An Khanh, Thu Duc City',
     lat: 10.7710,
     lng: 106.7070,
   },
   {
-    name: 'Cảng Cát Lái',
-    address: 'Đường Nguyễn Thị Định, Cát Lái, TP. Thủ Đức',
+    name: 'Cat Lai Port Logistics Hub',
+    address: 'Nguyen Thi Dinh St, Cat Lai, Thu Duc City',
     lat: 10.7600,
     lng: 106.7850,
   },
   {
-    name: 'Bến xe Miền Đông mới',
-    address: 'Quốc Lộ 1A, Long Bình, TP. Thủ Đức',
+    name: 'New Mien Dong Bus Terminal',
+    address: 'National Highway 1A, Long Binh, Thu Duc City',
     lat: 10.8780,
     lng: 106.8150,
   },
@@ -80,10 +80,10 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
   pickedPoint,
 }) => {
   // Input values
-  const [originText, setOriginText] = useState('Chợ Thủ Đức');
+  const [originText, setOriginText] = useState('Thu Duc Central Market');
   const [originPlace, setOriginPlace] = useState<PlaceSuggestion | null>(POPULAR_PRESETS[0]);
 
-  const [destText, setDestText] = useState('Khu Công Nghệ Cao (SHTP)');
+  const [destText, setDestText] = useState('Saigon Hi-Tech Park (SHTP)');
   const [destPlace, setDestPlace] = useState<PlaceSuggestion | null>(POPULAR_PRESETS[1]);
 
   // Autocomplete state
@@ -174,7 +174,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
   // Trigger Route Planning
   const handlePlanRoute = async () => {
     if (!originPlace || !destPlace) {
-      setErrorMsg('Vui lòng chọn Điểm xuất phát và Điểm đến từ danh sách gợi ý hoặc bản đồ');
+      setErrorMsg('Please select both Origin and Destination from suggestions or the map');
       return;
     }
 
@@ -194,7 +194,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
       setRouteResult(result);
       onRouteCalculated(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi không xác định khi tìm đường';
+      const msg = err instanceof Error ? err.message : 'Unable to calculate navigation route';
       setErrorMsg(msg);
       setRouteResult(null);
       onRouteCalculated(null);
@@ -234,7 +234,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               value={originText}
               onChange={(e) => handleInputChange('origin', e.target.value)}
               onFocus={() => setActiveField('origin')}
-              placeholder="Chọn điểm xuất phát..."
+              placeholder="Enter starting point..."
               className="w-full pl-3 pr-8 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
             {originText && (
@@ -257,7 +257,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
           <button
             onClick={handleSwap}
             className="p-1 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-200/80 transition-colors mx-2 cursor-pointer"
-            title="Đổi chiều đi"
+            title="Swap directions"
           >
             <ArrowsDownUp size={14} weight="bold" />
           </button>
@@ -275,7 +275,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               value={destText}
               onChange={(e) => handleInputChange('dest', e.target.value)}
               onFocus={() => setActiveField('dest')}
-              placeholder="Chọn điểm đến..."
+              placeholder="Enter destination..."
               className="w-full pl-3 pr-8 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
             {destText && (
@@ -303,7 +303,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             }`}
           >
             <Crosshair size={13} weight="bold" />
-            <span>{isMapPicking === 'origin' ? 'Nhấp chọn Điểm đi' : 'Chọn Điểm đi trên bản đồ'}</span>
+            <span>{isMapPicking === 'origin' ? 'Selecting Origin...' : 'Pick Origin on Map'}</span>
           </button>
 
           <button
@@ -315,7 +315,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             }`}
           >
             <Crosshair size={13} weight="bold" />
-            <span>{isMapPicking === 'dest' ? 'Nhấp chọn Điểm đến' : 'Chọn Điểm đến trên bản đồ'}</span>
+            <span>{isMapPicking === 'dest' ? 'Selecting Destination...' : 'Pick Destination on Map'}</span>
           </button>
         </div>
 
@@ -326,7 +326,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
           className="w-full mt-1.5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <NavigationArrow size={16} weight="fill" />
-          <span>{isCalculating ? 'Đang phân tích đường đi & AI...' : 'Tìm Đường Đi Nhanh Nhất'}</span>
+          <span>{isCalculating ? 'Analyzing Route & AI...' : 'Find Fastest Route'}</span>
         </button>
       </div>
 
@@ -334,7 +334,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
       {activeField && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-2 max-h-56 overflow-y-auto custom-scrollbar z-30">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
-            <span>{isSearching ? 'Đang tìm kiếm...' : 'Gợi ý địa điểm'}</span>
+            <span>{isSearching ? 'Searching...' : 'Suggested Locations'}</span>
             <button onClick={() => setActiveField(null)} className="text-slate-400 hover:text-slate-700">
               <X size={12} weight="bold" />
             </button>
@@ -358,7 +358,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             </div>
           ) : (
             <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 px-2 font-semibold">Địa điểm phổ biến tại Thủ Đức:</span>
+              <span className="text-[10px] text-slate-400 px-2 font-semibold">Popular Hubs in Thu Duc:</span>
               {POPULAR_PRESETS.map((p, idx) => (
                 <button
                   key={idx}
@@ -395,7 +395,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                   <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
                     {Math.round(routeResult.travel_time_minutes)}
                   </span>
-                  <span className="text-sm font-bold text-slate-700">phút</span>
+                  <span className="text-sm font-bold text-slate-700">mins</span>
                   <span className="text-xs text-slate-400 font-medium">&bull;</span>
                   <span className="text-xs font-bold text-slate-500 font-mono">
                     {routeResult.distance_km} km
@@ -408,8 +408,8 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                   />
                   <span className="text-xs font-semibold text-slate-700">
                     {routeResult.traffic_delay_minutes > 0
-                      ? `Ùn ứ chậm thêm +${Math.round(routeResult.traffic_delay_minutes)} phút`
-                      : 'Đường thông suốt, không kẹt xe'}
+                      ? `+${Math.round(routeResult.traffic_delay_minutes)} min delay due to congestion`
+                      : 'Free flow, no traffic delays'}
                   </span>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               <div className="p-2 rounded-xl bg-slate-50 flex items-center gap-2">
                 <Speedometer size={16} weight="duotone" className="text-blue-600" />
                 <div>
-                  <span className="text-[10px] text-slate-400 font-medium block">Vận tốc thực tế</span>
+                  <span className="text-[10px] text-slate-400 font-medium block">Actual Speed</span>
                   <span className="font-bold text-slate-800 font-mono">
                     {routeResult.current_speed} km/h
                   </span>
@@ -442,7 +442,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               <div className="p-2 rounded-xl bg-slate-50 flex items-center gap-2">
                 <Clock size={16} weight="duotone" className="text-indigo-600" />
                 <div>
-                  <span className="text-[10px] text-slate-400 font-medium block">Tốc độ tự do</span>
+                  <span className="text-[10px] text-slate-400 font-medium block">Free-flow Speed</span>
                   <span className="font-bold text-slate-800 font-mono">
                     {routeResult.free_flow_speed} km/h
                   </span>
@@ -464,10 +464,10 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Dự báo AI Lộ Trình Này
+                  AI Route Forecast
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium">
-                  Biến thiên lưu lượng sau 15, 30, 45 phút tới
+                  Traffic velocity trend for next 15, 30, 45 mins
                 </p>
               </div>
             </div>
@@ -483,7 +483,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-slate-500">
-                        +{p.horizon_minutes}p
+                        +{p.horizon_minutes}m
                       </span>
                       {p.trend === 'improving' ? (
                         <TrendUp size={13} weight="bold" className="text-emerald-600" />
@@ -519,7 +519,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200/70 text-xs text-blue-900 font-medium leading-relaxed">
               <span className="font-bold block mb-0.5 text-blue-950 flex items-center gap-1">
                 <ShieldCheck size={14} weight="fill" className="text-blue-600" />
-                Khuyến nghị thông minh từ AI:
+                AI Smart Recommendation:
               </span>
               {routeResult.recommendation}
             </div>
@@ -530,7 +530,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             onClick={handleClearRoute}
             className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            Xóa lộ trình này
+            Clear this route
           </button>
         </div>
       )}

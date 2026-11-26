@@ -192,7 +192,7 @@ class TrafficAPIClient:
             for r in results:
                 poi = r.get("poi", {})
                 addr = r.get("address", {})
-                name = poi.get("name") or addr.get("freeformAddress", "Địa điểm")
+                name = poi.get("name") or addr.get("freeformAddress", "Location")
                 address = addr.get("freeformAddress", name)
                 pos = r.get("position", {})
                 if "lat" in pos and "lon" in pos:
@@ -210,16 +210,16 @@ class TrafficAPIClient:
     def reverse_geocode(self, lat: float, lon: float) -> str:
         """Finds address for a coordinate point via TomTom Reverse Geocode API."""
         url = f"https://api.tomtom.com/search/2/reverseGeocode/{lat},{lon}.json"
-        params = {"key": self.api_key, "language": "vi-VN"}
+        params = {"key": self.api_key, "language": "en-US"}
         try:
             resp = self.session.get(url, params=params, timeout=8)
             resp.raise_for_status()
             addrs = resp.json().get("addresses", [])
             if addrs:
-                return addrs[0].get("address", {}).get("freeformAddress", f"Tọa độ ({lat:.4f}, {lon:.4f})")
+                return addrs[0].get("address", {}).get("freeformAddress", f"Coordinates ({lat:.4f}, {lon:.4f})")
         except Exception as e:
             logger.warning(f"TomTom reverse geocode failed: {e}")
-        return f"Tọa độ ({lat:.4f}, {lon:.4f})"
+        return f"Coordinates ({lat:.4f}, {lon:.4f})"
 
     def plan_dynamic_route(
         self,
@@ -245,7 +245,7 @@ class TrafficAPIClient:
             data = resp.json()
             routes = data.get("routes", [])
             if not routes:
-                raise TomTomAPIError("Không tìm thấy đường đi giữa 2 điểm này")
+                raise TomTomAPIError("No route found between the specified points")
 
             route = routes[0]
             summary = route.get("summary", {})
@@ -281,5 +281,5 @@ class TrafficAPIClient:
             }
         except Exception as e:
             logger.error(f"Dynamic routing failed: {e}")
-            raise TomTomAPIError(f"Lỗi tính toán đường đi: {str(e)}") from e
+            raise TomTomAPIError(f"Route calculation error: {str(e)}") from e
 

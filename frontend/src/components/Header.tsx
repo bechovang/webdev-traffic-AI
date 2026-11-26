@@ -52,11 +52,11 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const scenarios = [
-    { id: 'normal', label: 'Bình thường', icon: ArrowCounterClockwise },
-    { id: 'morning_rush', label: 'Cao điểm Sáng', icon: Sun },
-    { id: 'evening_rush', label: 'Cao điểm Chiều', icon: SunHorizon },
-    { id: 'accident', label: 'Sự cố / Va chạm', icon: WarningOctagon },
-    { id: 'rain', label: 'Mưa to', icon: CloudRain },
+    { id: 'normal', label: 'Normal', icon: ArrowCounterClockwise },
+    { id: 'morning_rush', label: 'Morning Peak', icon: Sun },
+    { id: 'evening_rush', label: 'Evening Peak', icon: SunHorizon },
+    { id: 'accident', label: 'Incident / Collision', icon: WarningOctagon },
+    { id: 'rain', label: 'Heavy Rain', icon: CloudRain },
   ];
 
   return (
@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
                 border: `1px solid ${tokens.colors.brand.primarySubtle}`,
               }}
             >
-              TP. Thủ Đức
+              Thu Duc City
             </span>
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 weight="bold"
                 className={isWsConnected ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}
               />
-              <span>{isWsConnected ? 'Trực tiếp 8s' : 'Đang kết nối...'}</span>
+              <span>{isWsConnected ? 'Live Stream 8s' : 'Connecting...'}</span>
             </span>
             <span className="text-slate-300">&bull;</span>
             <span className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="pointer-events-auto hidden lg:flex items-center gap-4 hud-glass px-5 py-2 rounded-2xl shadow-md text-xs font-semibold text-slate-700">
           <div className="flex items-center gap-2">
             <Speedometer size={16} weight="bold" className="text-blue-600" />
-            <span>Vận tốc TB:</span>
+            <span>Avg Speed:</span>
             <span className="font-extrabold text-slate-900 text-sm">
               {summary.average_speed} <span className="text-[10px] font-normal text-slate-500">km/h</span>
             </span>
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
               weight="bold"
               className={summary.congested_routes_count > 0 ? 'text-rose-500' : 'text-emerald-500'}
             />
-            <span>Điểm nghẽn:</span>
+            <span>Congestion:</span>
             <span
               className={`font-extrabold text-sm ${
                 summary.congested_routes_count > 0 ? 'text-rose-600' : 'text-emerald-600'
@@ -167,14 +167,14 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onPollNow}
           disabled={isPolling}
           className="hud-glass-solid hover:bg-slate-50 text-slate-800 border border-slate-200/90 px-3.5 py-2.5 rounded-2xl text-xs font-bold shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-          title="Lấy dữ liệu mới ngay lập tức"
+          title="Fetch latest traffic telemetry"
         >
           <ArrowsClockwise
             size={16}
             weight="bold"
             className={`text-blue-600 ${isPolling ? 'animate-spin' : ''}`}
           />
-          <span className="hidden sm:inline">{isPolling ? 'Đang cào...' : 'Cập nhật ngay'}</span>
+          <span className="hidden sm:inline">{isPolling ? 'Polling...' : 'Poll Now'}</span>
         </button>
       </div>
     </header>

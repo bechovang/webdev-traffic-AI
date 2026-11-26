@@ -141,8 +141,8 @@ export function App() {
       setPickedPoint({
         mode: isMapPicking,
         place: {
-          name: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
-          address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+          name: `Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+          address: `Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
           lat,
           lng,
         },

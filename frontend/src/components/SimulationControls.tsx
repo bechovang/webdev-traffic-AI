@@ -24,36 +24,36 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
   const scenarios = [
     {
       id: 'normal',
-      name: 'Bình thường',
-      desc: 'Lưu thông thông suốt, tốc độ chuẩn',
+      name: 'Normal Flow',
+      desc: 'Free flow, standard city velocity',
       icon: ArrowCounterClockwise,
       color: tokens.colors.los.A,
     },
     {
       id: 'morning_rush',
-      name: 'Cao điểm Sáng',
-      desc: '07:00 - 09:00: Dòng xe hướng vào trung tâm',
+      name: 'Morning Peak',
+      desc: '07:00 - 09:00: High volume inbound to city center',
       icon: Sun,
       color: tokens.colors.los.C,
     },
     {
       id: 'evening_rush',
-      name: 'Cao điểm Chiều',
-      desc: '17:00 - 19:30: Kẹt xe cửa ngõ & cảng Cát Lái',
+      name: 'Evening Peak',
+      desc: '17:00 - 19:30: Gateway corridors & Cat Lai port gridlock',
       icon: SunHorizon,
       color: tokens.colors.los.E,
     },
     {
       id: 'accident',
-      name: 'Sự cố Va chạm',
-      desc: 'Tắc nghẽn tại Phạm Văn Đồng & Võ Nguyên Giáp',
+      name: 'Traffic Incident',
+      desc: 'Accident blockage on Pham Van Dong & Vo Nguyen Giap',
       icon: WarningOctagon,
       color: tokens.colors.los.F,
     },
     {
       id: 'rain',
-      name: 'Mưa lớn / Ngập',
-      desc: 'Tốc độ đô thị giảm 35-45% diện rộng',
+      name: 'Heavy Rain / Flood',
+      desc: 'Citywide speed drops by 35-45% due to storms',
       icon: CloudRain,
       color: tokens.colors.brand.primary,
     },
@@ -74,10 +74,10 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
         </div>
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Kịch bản Mô phỏng (Demo Studio)
+            Simulation Scenarios (Demo Studio)
           </h3>
           <p className="text-[11px] text-slate-500 font-medium">
-            Kiểm tra khả năng phản ứng & dự báo suy giảm của AI
+            Evaluate AI responsiveness & traffic degradation forecasting
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
                   {isActive && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-100/70 px-1.5 py-0.5 rounded-full">
                       <CheckCircle size={11} weight="fill" />
-                      Đang kích hoạt
+                      Active
                     </span>
                   )}
                 </div>
@@ -131,7 +131,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
 
       {/* Info notice */}
       <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60 text-[10px] text-slate-500 font-medium">
-        Tác động thay đổi trực tiếp luồng dữ liệu WebSocket và mô hình dự báo AI theo thời gian thực.
+        Directly updates WebSocket telemetry stream and AI predictive models in real-time.
       </div>
     </div>
   );

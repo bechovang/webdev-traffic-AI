@@ -55,10 +55,10 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
       <div className="flex flex-col gap-2.5 pb-2 border-b border-slate-200/60">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Chi tiết 10 Tuyến Trọng Điểm
+            Key Traffic Corridors
           </h3>
           <span className="text-[11px] font-mono font-bold text-slate-500">
-            {sorted.length}/{metrics.length} tuyến
+            {sorted.length}/{metrics.length} corridors
           </span>
         </div>
 
@@ -73,7 +73,7 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
             />
             <input
               type="text"
-              placeholder="Tìm hành lang..."
+              placeholder="Search corridor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-2.5 py-1.5 bg-slate-100/70 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
@@ -88,7 +88,7 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
               onChange={(e) => setLosFilter(e.target.value)}
               className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
             >
-              <option value="ALL">Tất cả LOS</option>
+              <option value="ALL">All LOS</option>
               {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((lvl) => (
                 <option key={lvl} value={lvl}>
                   LOS {lvl}
@@ -109,7 +109,7 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
                 className="pb-2 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <span>Hành lang</span>
+                  <span>Corridor</span>
                   <ArrowsDownUp size={12} weight="bold" />
                 </div>
               </th>
@@ -118,11 +118,11 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
                 className="pb-2 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <span>Tốc độ</span>
+                  <span>Speed</span>
                   <ArrowsDownUp size={12} weight="bold" />
                 </div>
               </th>
-              <th className="pb-2">Thời gian</th>
+              <th className="pb-2">Travel Time</th>
               <th
                 onClick={() => handleSort('ratio')}
                 className="pb-2 cursor-pointer hover:text-slate-800 transition-colors"
@@ -161,7 +161,7 @@ export const CorridorTable: React.FC<CorridorTableProps> = ({
                     {m.current_speed} <span className="text-[10px] text-slate-400 font-normal">km/h</span>
                   </td>
                   <td className="py-2.5 font-mono text-slate-600">
-                    {Math.round(m.travel_time_seconds / 60)} ph
+                    {Math.round(m.travel_time_seconds / 60)} min
                   </td>
                   <td className="py-2.5">
                     <span

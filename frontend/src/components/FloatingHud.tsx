@@ -51,22 +51,22 @@ export const FloatingHud: React.FC<FloatingHudProps> = ({
   const tabs = [
     {
       id: 'navigation' as TabType,
-      label: 'Dẫn đường',
-      shortLabel: 'Tìm đường',
+      label: 'Directions',
+      shortLabel: 'Route',
       icon: NavigationArrow,
-      badge: activeRoutePlan ? `${Math.round(activeRoutePlan.travel_time_minutes)}p` : undefined,
+      badge: activeRoutePlan ? `${Math.round(activeRoutePlan.travel_time_minutes)}m` : undefined,
       badgeColor: tokens.colors.brand.primary,
     },
     {
       id: 'simulation' as TabType,
-      label: 'Kịch bản',
-      shortLabel: 'Mô phỏng',
+      label: 'Scenarios',
+      shortLabel: 'Demo',
       icon: SlidersHorizontal,
     },
     {
       id: 'trend' as TabType,
-      label: 'Vận tốc',
-      shortLabel: 'Biểu đồ',
+      label: 'Velocity',
+      shortLabel: 'Trend',
       icon: ChartLineUp,
     },
   ];
@@ -88,12 +88,12 @@ export const FloatingHud: React.FC<FloatingHudProps> = ({
                 <span className="text-xs font-bold text-slate-800 tracking-tight block truncate">
                   {activeRoutePlan
                     ? `${activeRoutePlan.origin.name} ➔ ${activeRoutePlan.destination.name}`
-                    : 'Tìm đường & Dự báo AI'}
+                    : 'Route Navigation & AI Forecast'}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium block truncate">
                   {activeRoutePlan
-                    ? `${activeRoutePlan.distance_km} km • ${Math.round(activeRoutePlan.travel_time_minutes)} phút di chuyển`
-                    : 'Nhập điểm đi và đến theo thời gian thực'}
+                    ? `${activeRoutePlan.distance_km} km • ${Math.round(activeRoutePlan.travel_time_minutes)} mins travel time`
+                    : 'Real-time origin & destination routing'}
                 </span>
               </div>
             </div>
@@ -103,7 +103,7 @@ export const FloatingHud: React.FC<FloatingHudProps> = ({
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors ml-auto cursor-pointer"
-            title={isCollapsed ? 'Mở rộng bảng tìm đường' : 'Thu gọn bảng điều khiển'}
+            title={isCollapsed ? 'Expand navigation panel' : 'Collapse panel'}
             aria-label="Toggle HUD"
           >
             {isCollapsed ? <CaretRight size={16} weight="bold" /> : <CaretLeft size={16} weight="bold" />}
@@ -197,22 +197,22 @@ export const FloatingHud: React.FC<FloatingHudProps> = ({
               <div className="flex flex-col h-full space-y-3">
                 <div className="pb-2 border-b border-slate-200/60">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                    Xu hướng Vận tốc Toàn Đô thị
+                    Citywide Velocity Trend
                   </h3>
                   <p className="text-[10px] text-slate-500 font-medium">
-                    Diễn biến vận tốc thực tế cập nhật liên tục qua TomTom & WebSocket
+                    Live velocity fluctuations updated continuously via TomTom & WebSocket
                   </p>
                 </div>
                 <div className="flex-1 min-h-[260px]">
                   <SpeedTrendChart
                     historyData={historyData}
-                    selectedRouteName={activeRoutePlan ? `${activeRoutePlan.origin.name} ➔ ${activeRoutePlan.destination.name}` : 'Khu vực TP. Thủ Đức'}
+                    selectedRouteName={activeRoutePlan ? `${activeRoutePlan.origin.name} ➔ ${activeRoutePlan.destination.name}` : 'Thu Duc City Corridor'}
                   />
                 </div>
                 {summary && (
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex justify-between items-center font-medium">
-                    <span>Vận tốc TB: <strong className="font-mono text-slate-900">{summary.average_speed} km/h</strong></span>
-                    <span>Tình trạng: <strong className="text-blue-600">{summary.system_status}</strong></span>
+                    <span>Avg Speed: <strong className="font-mono text-slate-900">{summary.average_speed} km/h</strong></span>
+                    <span>Status: <strong className="text-blue-600">{summary.system_status}</strong></span>
                   </div>
                 )}
               </div>

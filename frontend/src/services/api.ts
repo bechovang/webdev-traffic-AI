@@ -73,10 +73,10 @@ export async function searchPlaces(query: string): Promise<PlaceSuggestion[]> {
 export async function reverseGeocode(lat: number, lng: number): Promise<{ address: string; lat: number; lng: number }> {
   try {
     const res = await fetch(`${API_BASE}/api/places/reverse?lat=${lat}&lng=${lng}`);
-    if (!res.ok) return { address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+    if (!res.ok) return { address: `Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
     return res.json();
   } catch {
-    return { address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+    return { address: `Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
   }
 }
 
@@ -88,7 +88,7 @@ export async function planDynamicRoute(req: DynamicRoutePlanRequest): Promise<Dy
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Không thể tìm đường');
+    throw new Error(err.detail || 'Failed to calculate route');
   }
   return res.json();
 }

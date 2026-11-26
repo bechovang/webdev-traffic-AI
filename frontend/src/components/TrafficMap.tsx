@@ -90,7 +90,7 @@ function RecenterMapButton({ center }: { center: [number, number] }) {
     <button
       onClick={() => map.flyTo(center, 12.5, { duration: 1 })}
       className="p-1.5 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100 transition-all cursor-pointer active:scale-95"
-      title="Căn giữa TP. Thủ Đức"
+      title="Recenter Map (Thu Duc)"
     >
       <Crosshair size={16} weight="bold" />
     </button>
@@ -141,13 +141,13 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
           <Crosshair size={18} weight="bold" className="text-emerald-400 shrink-0" />
           <span className="text-xs font-bold">
             {isMapPicking === 'origin'
-              ? 'Nhấp vào bất kỳ điểm nào trên bản đồ để chọn Điểm xuất phát (A)'
-              : 'Nhấp vào bất kỳ điểm nào trên bản đồ để chọn Điểm đến (B)'}
+              ? 'Click anywhere on map to set Origin (Point A)'
+              : 'Click anywhere on map to set Destination (Point B)'}
           </span>
           <button
             onClick={onCancelMapPick}
             className="ml-2 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-            title="Hủy chọn trên bản đồ"
+            title="Cancel map selection"
           >
             <X size={14} weight="bold" />
           </button>
@@ -240,7 +240,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
               <Popup className="custom-popup">
                 <div className="p-1 min-w-[240px]">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="font-extrabold text-sm text-slate-900">Lộ trình được đề xuất</span>
+                    <span className="font-extrabold text-sm text-slate-900">Recommended Route</span>
                     {routeToken && (
                       <span
                         className="px-2 py-0.5 rounded-md text-[11px] font-black text-white"
@@ -255,17 +255,17 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-slate-500 font-medium">
                         <Clock size={14} weight="bold" className="text-blue-600" />
-                        Thời gian ước tính:
+                        Estimated Travel Time:
                       </span>
                       <span className="font-extrabold text-slate-900">
-                        {Math.round(activeRoutePlan.travel_time_minutes)} phút
+                        {Math.round(activeRoutePlan.travel_time_minutes)} mins
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-slate-500 font-medium">
                         <Speedometer size={14} weight="bold" className="text-slate-400" />
-                        Quãng đường:
+                        Distance:
                       </span>
                       <span className="font-bold text-slate-800">
                         {activeRoutePlan.distance_km} km
@@ -273,7 +273,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500 font-medium">Tình trạng:</span>
+                      <span className="text-slate-500 font-medium">Traffic Condition:</span>
                       <span className="font-bold text-xs text-slate-800">
                         {activeRoutePlan.congestion_level}
                       </span>
@@ -296,7 +296,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
             >
               <Popup>
                 <div className="p-1 font-bold text-xs text-slate-800">
-                  🟢 Điểm xuất phát: {activeRoutePlan.origin.name}
+                  🟢 Origin: {activeRoutePlan.origin.name}
                 </div>
               </Popup>
             </CircleMarker>
@@ -314,7 +314,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
             >
               <Popup>
                 <div className="p-1 font-bold text-xs text-slate-800">
-                  📍 Điểm đến: {activeRoutePlan.destination.name}
+                  📍 Destination: {activeRoutePlan.destination.name}
                 </div>
               </Popup>
             </CircleMarker>
@@ -335,7 +335,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
-                  title={showTomTomFlow ? 'Tắt lớp luồng TomTom' : 'Bật lớp luồng TomTom Live Flow'}
+                  title={showTomTomFlow ? 'Hide TomTom traffic flow layer' : 'Show TomTom Live Flow layer'}
                 >
                   <TrafficSignal size={16} weight={showTomTomFlow ? 'fill' : 'bold'} />
                   <span className="hidden sm:inline">TomTom Flow</span>
@@ -352,10 +352,10 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
                       ? 'bg-rose-600 text-white shadow-xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
-                  title={showIncidents ? 'Tắt sự cố TomTom' : 'Bật sự cố giao thông TomTom'}
+                  title={showIncidents ? 'Hide TomTom incidents layer' : 'Show TomTom traffic incidents'}
                 >
                   <WarningCircle size={16} weight={showIncidents ? 'fill' : 'bold'} />
-                  <span className="hidden sm:inline">Sự cố</span>
+                  <span className="hidden sm:inline">Incidents</span>
                 </button>
               )}
 
@@ -363,7 +363,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
               <button
                 onClick={() => setMapTheme(mapTheme === 'light' ? 'dark' : 'light')}
                 className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer"
-                title={mapTheme === 'light' ? 'Chuyển sang chế độ Đêm (Dark TOC)' : 'Chuyển sang chế độ Sáng (Light)'}
+                title={mapTheme === 'light' ? 'Switch to Night Mode (Dark TOC)' : 'Switch to Day Mode (Light)'}
               >
                 {mapTheme === 'light' ? <Moon size={16} weight="bold" /> : <Sun size={16} weight="bold" />}
               </button>
@@ -379,7 +379,7 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
               <div className="flex items-center justify-between gap-3 font-bold text-slate-800 mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <Compass size={14} weight="bold" className="text-blue-600" />
-                  <span>Cấp độ Thông thoáng (LOS)</span>
+                  <span>Level of Service (LOS)</span>
                 </div>
                 {tomtomApiKey && (
                   <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-full">
@@ -391,27 +391,27 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
               <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-600">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losA.hex }} />
-                  <span>A (Thông thoáng)</span>
+                  <span>A (Free Flow)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losB.hex }} />
-                  <span>B (Khá thoáng)</span>
+                  <span>B (Smooth)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losC.hex }} />
-                  <span>C (Bình thường)</span>
+                  <span>C (Stable)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losD.hex }} />
-                  <span>D (Chậm)</span>
+                  <span>D (Slowdown)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losE.hex }} />
-                  <span>E (Kẹt xe)</span>
+                  <span>E (Congested)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tokens.colors.traffic.losF.hex }} />
-                  <span>F (Tắc nghẽn)</span>
+                  <span>F (Breakdown)</span>
                 </div>
               </div>
             </div>

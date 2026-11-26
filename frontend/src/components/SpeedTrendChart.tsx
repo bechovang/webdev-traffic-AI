@@ -25,7 +25,7 @@ export const SpeedTrendChart: React.FC<SpeedTrendChartProps> = ({
     let timeLabel = `#${index + 1}`;
     try {
       const dt = new Date(item.timestamp);
-      timeLabel = dt.toLocaleTimeString('vi-VN', {
+      timeLabel = dt.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -48,18 +48,18 @@ export const SpeedTrendChart: React.FC<SpeedTrendChartProps> = ({
           <div>
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 uppercase tracking-wider">
               <ChartLineUp size={13} weight="bold" />
-              <span>Biến thiên vận tốc</span>
+              <span>Velocity Dynamics</span>
             </div>
             <h3 className="text-sm font-extrabold text-slate-900 mt-0.5 truncate max-w-[240px]">
-              {selectedRouteName || 'Toàn hành lang'}
+              {selectedRouteName || 'Full Corridor'}
             </h3>
           </div>
           <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-500">
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-1.5 rounded-full bg-blue-600 inline-block" /> Thực tế
+              <span className="w-2.5 h-1.5 rounded-full bg-blue-600 inline-block" /> Actual
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-1.5 rounded-full bg-slate-300 inline-block" /> Tự do
+              <span className="w-2.5 h-1.5 rounded-full bg-slate-300 inline-block" /> Free-flow
             </span>
           </div>
         </div>
@@ -95,7 +95,7 @@ export const SpeedTrendChart: React.FC<SpeedTrendChartProps> = ({
                         <div className="font-semibold text-slate-400 mb-0.5">{data.time}</div>
                         <div className="font-extrabold text-blue-600 text-sm">{data.speed} km/h</div>
                         <div className="text-[10px] text-slate-500 mt-0.5 font-bold">
-                          Cấp độ LOS: {data.los}
+                          LOS Level: {data.los}
                         </div>
                       </div>
                     );
@@ -117,7 +117,7 @@ export const SpeedTrendChart: React.FC<SpeedTrendChartProps> = ({
       </div>
 
       <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/70 text-xs text-slate-500 font-medium flex items-center justify-between">
-        <span>Vận tốc ghi nhận gần nhất:</span>
+        <span>Latest Recorded Speed:</span>
         <strong className="text-slate-900 font-extrabold">
           {historyData[historyData.length - 1]?.current_speed ?? '--'} km/h
         </strong>

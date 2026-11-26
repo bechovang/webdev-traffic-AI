@@ -19,42 +19,42 @@ export const tokens = {
     traffic: {
       losA: {
         hex: '#059669',
-        label: 'A: Rất thông thoáng',
+        label: 'A: Free Flow',
         bgSubtle: '#ecfdf5',
         text: '#065f46',
         border: '#a7f3d0',
       },
       losB: {
         hex: '#10b981',
-        label: 'B: Thông thoáng',
+        label: 'B: Smooth Flow',
         bgSubtle: '#f0fdf4',
         text: '#166534',
         border: '#bbf7d0',
       },
       losC: {
         hex: '#f59e0b',
-        label: 'C: Bình thường',
+        label: 'C: Stable Flow',
         bgSubtle: '#fffbeb',
         text: '#92400e',
         border: '#fde68a',
       },
       losD: {
         hex: '#f97316',
-        label: 'D: Bắt đầu chậm',
+        label: 'D: Approaching Congestion',
         bgSubtle: '#fff7ed',
         text: '#9a3412',
         border: '#fed7aa',
       },
       losE: {
         hex: '#e11d48',
-        label: 'E: Kẹt xe',
+        label: 'E: Congested',
         bgSubtle: '#fff1f2',
         text: '#9f1239',
         border: '#fecdd3',
       },
       losF: {
         hex: '#be123c',
-        label: 'F: Ùn tắc nghiêm trọng',
+        label: 'F: Severe Breakdown',
         bgSubtle: '#ffe4e6',
         text: '#881337',
         border: '#fda4af',
@@ -162,7 +162,7 @@ export function getTrafficToken(los: string) {
     default:
       return {
         hex: '#64748b',
-        label: 'Không xác định',
+        label: 'Unknown',
         bgSubtle: '#f8fafc',
         text: '#475569',
         border: '#cbd5e1',

@@ -104,7 +104,7 @@ def root():
         "service": "HCM Traffic AI Backend",
         "status": "online",
         "docs": "/docs",
-        "monitored_city": "TP. Thủ Đức, TP. Hồ Chí Minh",
+        "monitored_city": "Thu Duc City, Ho Chi Minh City",
     }
 
 
@@ -228,9 +228,9 @@ def plan_dynamic_route(req: DynamicRoutePlanRequest):
     # Reverse geocode if default names
     origin_name = req.origin_name
     dest_name = req.dest_name
-    if origin_name in ["", "Điểm xuất phát", "Vị trí đã chọn"]:
+    if origin_name in ["", "Origin", "Selected Location", "Điểm xuất phát", "Vị trí đã chọn"]:
         origin_name = client.reverse_geocode(req.origin_lat, req.origin_lng)
-    if dest_name in ["", "Điểm đến", "Vị trí đã chọn"]:
+    if dest_name in ["", "Destination", "Selected Location", "Điểm đến", "Vị trí đã chọn"]:
         dest_name = client.reverse_geocode(req.dest_lat, req.dest_lng)
 
     # Run AI Traffic Engine for this dynamic route

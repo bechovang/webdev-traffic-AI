@@ -53,7 +53,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
         {/* Speed */}
         <div className="flex items-center gap-1.5 pr-2.5 border-r border-slate-200">
           <Speedometer size={16} weight="duotone" className="text-blue-600" />
-          <span className="font-semibold text-slate-500">Vận tốc TB:</span>
+          <span className="font-semibold text-slate-500">Avg Speed:</span>
           <span className="font-extrabold text-slate-800 font-mono">
             {average_speed} <span className="text-[10px] font-normal text-slate-500">km/h</span>
           </span>
@@ -66,7 +66,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
             weight="duotone"
             style={{ color: isSevere ? tokens.colors.los.F : isModerate ? tokens.colors.los.C : tokens.colors.los.A }}
           />
-          <span className="font-semibold text-slate-500">Ùn ứ:</span>
+          <span className="font-semibold text-slate-500">Congested:</span>
           <span
             className="font-extrabold font-mono"
             style={{ color: isSevere ? tokens.colors.los.F : isModerate ? tokens.colors.los.C : tokens.colors.los.A }}
@@ -95,7 +95,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
               return (
                 <span
                   key={lvl}
-                  title={`Cấp ${lvl}: ${count} tuyến`}
+                  title={`Level ${lvl}: ${count} routes`}
                   className="px-1 py-0.5 rounded text-[9px] font-bold font-mono"
                   style={{
                     backgroundColor: `${tokens.colors.los[lvl]}20`,
@@ -114,11 +114,11 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {/* Vận tốc trung bình */}
+      {/* Citywide Average Speed */}
       <div className="bg-white/85 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Vận tốc TB Đô thị
+            Citywide Avg Speed
           </span>
           <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
             <Speedometer size={16} weight="duotone" />
@@ -132,11 +132,11 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
         </div>
       </div>
 
-      {/* Tuyến ùn tắc */}
+      {/* Congested routes */}
       <div className="bg-white/85 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Tuyến Chậm / Ùn Tắc
+            Congested Corridors
           </span>
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -152,15 +152,15 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
           >
             {congested_routes_count}
           </span>
-          <span className="text-xs text-slate-500 font-medium">/ {total_routes_count} tuyến</span>
+          <span className="text-xs text-slate-500 font-medium">/ {total_routes_count} corridors</span>
         </div>
       </div>
 
-      {/* Trạng thái hệ thống */}
+      {/* System status */}
       <div className="bg-white/85 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Tình trạng Lưu thông
+            Traffic Condition
           </span>
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -179,11 +179,11 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
         </div>
       </div>
 
-      {/* Phân bổ mức LOS */}
+      {/* LOS Distribution */}
       <div className="bg-white/85 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Phân loại LOS (A-F)
+            LOS Distribution (A-F)
           </span>
           <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <ShieldCheck size={16} weight="duotone" />
@@ -193,7 +193,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ summary, compact = false }) 
           {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((lvl) => {
             const count = los_distribution[lvl] || 0;
             return (
-              <div key={lvl} className="flex-1 text-center" title={`Cấp ${lvl}: ${count} tuyến`}>
+              <div key={lvl} className="flex-1 text-center" title={`Level ${lvl}: ${count} routes`}>
                 <div
                   className="text-[10px] font-black py-0.5 rounded font-mono"
                   style={{

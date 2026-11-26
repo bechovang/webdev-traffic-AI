@@ -40,7 +40,7 @@ export const CorridorList: React.FC<CorridorListProps> = ({
           />
           <input
             type="text"
-            placeholder="Tìm tên tuyến..."
+            placeholder="Search corridor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
@@ -54,7 +54,7 @@ export const CorridorList: React.FC<CorridorListProps> = ({
             onChange={(e) => setLosFilter(e.target.value)}
             className="bg-transparent border-none text-xs font-bold focus:outline-hidden cursor-pointer"
           >
-            <option value="ALL">Tất cả</option>
+            <option value="ALL">All</option>
             <option value="A">LOS A</option>
             <option value="B">LOS B</option>
             <option value="C">LOS C</option>
@@ -69,7 +69,7 @@ export const CorridorList: React.FC<CorridorListProps> = ({
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {filtered.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400 font-medium">
-            Không tìm thấy tuyến phù hợp
+            No matching corridors found
           </div>
         ) : (
           filtered.map((m) => {
@@ -101,7 +101,7 @@ export const CorridorList: React.FC<CorridorListProps> = ({
                         <strong className="text-slate-700">{m.current_speed}</strong> km/h
                       </span>
                       <span>&bull;</span>
-                      <span>Chuẩn {m.free_flow_speed} km/h</span>
+                      <span>Free-flow {m.free_flow_speed} km/h</span>
                     </div>
                   </div>
                 </div>

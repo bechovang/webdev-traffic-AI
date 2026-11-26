@@ -115,11 +115,11 @@ class AITrafficEngine:
 
         next_los = predictions[0].predicted_los
         if next_los in ["E", "F"]:
-            rec = f"Ùn tắc nghiêm trọng dự báo trong 15-30p tới (vận tốc ~{predictions[0].predicted_speed} km/h). Đề xuất phân luồng hoặc chọn lộ trình thay thế."
+            rec = f"Severe traffic congestion expected within 15-30 mins (~{predictions[0].predicted_speed} km/h). Consider rerouting or delaying departure."
         elif next_los in ["C", "D"]:
-            rec = f"Mật độ phương tiện gia tăng vừa phải trong 30p tới. Lưu thông chậm nhưng duy trì ổn định."
+            rec = f"Moderate traffic volume build-up expected over next 30 mins. Flow will slow down slightly but remain steady."
         else:
-            rec = "Tuyến đường thông thoáng, lưu thông thuận lợi trong 45 phút tiếp theo."
+            rec = "Optimal traffic flow. Route is completely clear with favorable driving conditions for the next 45 minutes."
 
         return RoutePrediction(
             route_id=current_metric.route_id,

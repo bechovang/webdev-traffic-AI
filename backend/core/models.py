@@ -12,12 +12,12 @@ from pydantic import BaseModel, Field
 class LOS_LEVELS:
     """Level of Service (LOS) classification thresholds based on congestion_ratio."""
 
-    A = {"min_ratio": 0.9, "description": "Thông thoáng"}
-    B = {"min_ratio": 0.75, "description": "Khá thông thoáng"}
-    C = {"min_ratio": 0.6, "description": "Bình thường"}
-    D = {"min_ratio": 0.45, "description": "Bắt đầu chậm"}
-    E = {"min_ratio": 0.3, "description": "Kẹt xe"}
-    F = {"min_ratio": 0.0, "description": "Kẹt xe nặng"}
+    A = {"min_ratio": 0.9, "description": "Free Flow"}
+    B = {"min_ratio": 0.75, "description": "Reasonably Free Flow"}
+    C = {"min_ratio": 0.6, "description": "Stable Flow"}
+    D = {"min_ratio": 0.45, "description": "Approaching Congestion"}
+    E = {"min_ratio": 0.3, "description": "Congested"}
+    F = {"min_ratio": 0.0, "description": "Severe Breakdown"}
 
 
 LOS_CONGESTION_MAP = {
@@ -220,10 +220,10 @@ class PlaceSuggestion(BaseModel):
 
 
 class DynamicRoutePlanRequest(BaseModel):
-    origin_name: str = "Điểm xuất phát"
+    origin_name: str = "Origin"
     origin_lat: float
     origin_lng: float
-    dest_name: str = "Điểm đến"
+    dest_name: str = "Destination"
     dest_lat: float
     dest_lng: float
 

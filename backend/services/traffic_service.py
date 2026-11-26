@@ -145,11 +145,11 @@ class TrafficService:
             los_dist[m.los] = los_dist.get(m.los, 0) + 1
 
         if congested_count >= 5:
-            status = "Kẹt xe diện rộng"
+            status = "Widespread Congestion"
         elif congested_count >= 2:
-            status = "Ùn tắc cục bộ"
+            status = "Localized Congestion"
         else:
-            status = "Giao thông thông thoáng"
+            status = "Optimal Flow"
 
         return SystemSummary(
             timestamp=datetime.now(VIETNAM_TZ).isoformat(),
