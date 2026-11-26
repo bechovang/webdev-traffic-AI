@@ -55,13 +55,19 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
   const [showIncidents, setShowIncidents] = useState<boolean>(false);
   const [mapTheme, setMapTheme] = useState<'light' | 'dark'>('light');
 
-  // Base map URL based on theme and API key
+  // Base map URL: Priority to TomTom official tiles (no watermark), fallback to OpenStreetMap
   const baseMapUrl =
     mapTheme === 'dark'
       ? tomtomApiKey
         ? `https://api.tomtom.com/map/1/tile/basic/night/{z}/{x}/{y}.png?key=${tomtomApiKey}`
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : tomtomApiKey
+      ? `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${tomtomApiKey}`
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+  const baseMapAttribution = tomtomApiKey
+    ? '&copy; <a href="https://www.tomtom.com">TomTom Maps</a> contributors'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   return (
     <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
@@ -72,10 +78,10 @@ export const TrafficMap: React.FC<TrafficMapProps> = ({
         zoomControl={false}
         className="w-full h-full"
       >
-        {/* Base Map Layer */}
+        {/* Base Map Layer (Clean, No Watermark) */}
         <TileLayer
-          key={mapTheme}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          key={`${mapTheme}-${baseMapUrl}`}
+          attribution={baseMapAttribution}
           url={baseMapUrl}
           maxZoom={19}
         />
