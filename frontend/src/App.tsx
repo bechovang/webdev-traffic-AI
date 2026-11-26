@@ -1,11 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
-import { KpiCards } from './components/KpiCards';
 import { TrafficMap } from './components/TrafficMap';
-import { AiPredictionPanel } from './components/AiPredictionPanel';
-import { SpeedTrendChart } from './components/SpeedTrendChart';
-import { CorridorTable } from './components/CorridorTable';
-import { SimulationControls } from './components/SimulationControls';
+import { FloatingHud } from './components/FloatingHud';
 import {
   getLatestMetrics,
   getSystemSummary,
@@ -152,82 +148,38 @@ export function App() {
     }
   };
 
-  const selectedRouteObj = metrics.find((m) => m.route_id === selectedRouteId);
-
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Sticky Header */}
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-900 select-none">
+      {/* Central Full-Bleed Map Viewport */}
+      <TrafficMap
+        metrics={metrics}
+        selectedRouteId={selectedRouteId}
+        onSelectRoute={setSelectedRouteId}
+      />
+
+      {/* Floating Header Island (Top) */}
       <Header
+        summary={summary}
         isWsConnected={isWsConnected}
         onPollNow={handlePollNow}
         isPolling={isPolling}
         currentScenario={currentScenario}
+        onSelectScenario={handleSelectScenario}
       />
 
-      {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-5 space-y-5">
-        {/* KPI Summary Cards */}
-        <KpiCards summary={summary} />
-
-        {/* Top Grid: Interactive Map + AI Prediction Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Map Column (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col">
-            <TrafficMap
-              metrics={metrics}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={setSelectedRouteId}
-            />
-          </div>
-
-          {/* AI Prediction Column (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col">
-            <AiPredictionPanel
-              prediction={prediction}
-              isLoading={isLoadingPrediction}
-            />
-          </div>
-        </div>
-
-        {/* Simulation Controls Studio Bar */}
-        <SimulationControls
-          currentScenario={currentScenario}
-          onSelectScenario={handleSelectScenario}
-          isLoading={isPolling}
-        />
-
-        {/* Bottom Grid: Speed Trend Chart + Live Detailed Corridor Table */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Historical Speed Trend Chart (5 cols) */}
-          <div className="lg:col-span-5">
-            <SpeedTrendChart
-              historyData={historyData}
-              selectedRouteName={selectedRouteObj?.route_name}
-            />
-          </div>
-
-          {/* Corridor Detailed Table (7 cols) */}
-          <div className="lg:col-span-7">
-            <CorridorTable
-              metrics={metrics}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={setSelectedRouteId}
-            />
-          </div>
-        </div>
-      </main>
-
-      {/* Civic Tech Footer */}
-      <footer className="border-t border-slate-200/80 bg-white/70 py-4 px-4 text-center text-xs text-slate-500 font-medium">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            Hệ thống Trực quan hóa Giao thông Đô thị Thông minh — TP. Thủ Đức, TP. Hồ Chí Minh
-          </span>
-          <span className="text-slate-400">
-            Nguồn dữ liệu: TomTom Traffic API &bull; WebDev Competition 2026
-          </span>
-        </div>
-      </footer>
+      {/* Floating HUD Drawer (Left) */}
+      <FloatingHud
+        metrics={metrics}
+        summary={summary}
+        selectedRouteId={selectedRouteId}
+        onSelectRoute={setSelectedRouteId}
+        prediction={prediction}
+        isLoadingPrediction={isLoadingPrediction}
+        historyData={historyData}
+        currentScenario={currentScenario}
+        onSelectScenario={handleSelectScenario}
+        isScenarioLoading={isPolling}
+      />
     </div>
   );
 }

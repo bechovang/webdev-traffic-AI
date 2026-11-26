@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import type { RoutePrediction } from '../types';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Clock, ShieldCheck, AlertTriangle, Lightbulb } from 'lucide-react';
-import { getLosColor } from './TrafficMap';
+import { getTrafficToken } from '../tokens';
+import {
+  Sparkle,
+  TrendUp,
+  TrendDown,
+  Minus,
+  Clock,
+  ShieldCheck,
+  Warning,
+  LightbulbFilament,
+  Speedometer,
+} from '@phosphor-icons/react';
 
 interface AiPredictionPanelProps {
   prediction: RoutePrediction | null;
@@ -16,23 +26,23 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs h-full flex flex-col justify-center items-center">
-        <Sparkles className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-        <span className="text-sm font-semibold text-slate-700">Đang chạy mô hình suy luận AI...</span>
-        <span className="text-xs text-slate-400 mt-1">Phân tích chuỗi thời gian & sóng ùn tắc</span>
+      <div className="p-6 h-full flex flex-col justify-center items-center text-center">
+        <Sparkle size={32} weight="fill" className="text-blue-500 animate-spin mb-3" />
+        <span className="text-xs font-bold text-slate-800">Đang chạy mô hình AI suy luận...</span>
+        <span className="text-[11px] text-slate-400 mt-1">Phân tích chuỗi thời gian & sóng ùn tắc</span>
       </div>
     );
   }
 
   if (!prediction) {
     return (
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs h-full flex flex-col justify-center items-center text-center">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-          <Sparkles className="w-6 h-6" />
+      <div className="p-6 h-full flex flex-col justify-center items-center text-center">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+          <Sparkle size={24} weight="bold" />
         </div>
-        <h3 className="font-bold text-slate-800 text-sm">Chưa chọn tuyến đường</h3>
-        <p className="text-xs text-slate-500 mt-1 max-w-[240px]">
-          Nhấp chọn một tuyến trên bản đồ hoặc bảng danh sách để xem dự báo AI 15p - 30p - 45p tới.
+        <h3 className="font-extrabold text-slate-800 text-sm">Chưa chọn tuyến đường</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
+          Nhấp chọn một tuyến trên bản đồ để xem dự báo AI 15p - 30p - 45p tới.
         </p>
       </div>
     );
@@ -42,28 +52,31 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
     prediction.predictions.find((p) => p.horizon_minutes === selectedHorizon) ||
     prediction.predictions[0];
 
-  const losColor = getLosColor(currentPred.predicted_los);
+  const token = getTrafficToken(currentPred.predicted_los);
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs h-full flex flex-col justify-between">
+    <div className="flex flex-col h-full justify-between gap-3 p-1">
       <div>
-        {/* Top Header */}
+        {/* Route Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 uppercase tracking-wider">
+              <Sparkle size={13} weight="fill" />
               <span>Dự báo AI Trực quan</span>
             </div>
-            <h3 className="text-base font-bold text-slate-900 mt-0.5">{prediction.route_name}</h3>
+            <h3 className="text-sm font-extrabold text-slate-900 mt-0.5">{prediction.route_name}</h3>
           </div>
           <div className="text-right">
-            <span className="text-[11px] text-slate-400 font-medium">Hiện tại</span>
-            <div className="text-sm font-bold text-slate-800">{prediction.current_speed} km/h</div>
+            <span className="text-[10px] text-slate-400 font-medium">Hiện tại</span>
+            <div className="text-xs font-black text-slate-800 flex items-center gap-1">
+              <Speedometer size={13} weight="bold" className="text-blue-600" />
+              <span>{prediction.current_speed} km/h</span>
+            </div>
           </div>
         </div>
 
         {/* Horizon Tabs (+15p, +30p, +45p) */}
-        <div className="flex items-center p-1 bg-slate-100/80 rounded-xl mt-3.5">
+        <div className="flex items-center p-1 bg-slate-100/90 rounded-xl mt-3">
           {prediction.predictions.map((p) => {
             const isTabActive = selectedHorizon === p.horizon_minutes;
             return (
@@ -83,22 +96,22 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
         </div>
 
         {/* Prediction Main Box */}
-        <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+        <div className="mt-3.5 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs text-slate-500 font-medium">Vận tốc dự báo</span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-[11px] text-slate-500 font-medium">Vận tốc dự báo</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
                 <span className="text-2xl font-black text-slate-900">{currentPred.predicted_speed}</span>
                 <span className="text-xs font-semibold text-slate-500">km/h</span>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-xs text-slate-500 font-medium">Xếp hạng dịch vụ</span>
-              <div className="mt-0.5">
+              <span className="text-[11px] text-slate-500 font-medium">Xếp hạng dịch vụ</span>
+              <div className="mt-1">
                 <span
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-2xs"
-                  style={{ backgroundColor: losColor }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-black text-white shadow-xs"
+                  style={{ backgroundColor: token.hex }}
                 >
                   LOS {currentPred.predicted_los} ({currentPred.predicted_congestion_level})
                 </span>
@@ -106,12 +119,12 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-200/60 text-xs">
+          <div className="grid grid-cols-2 gap-2 mt-3.5 pt-3 border-t border-slate-200/60 text-xs">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-400" />
+              <Clock size={16} weight="bold" className="text-slate-400" />
               <div>
-                <div className="text-[11px] text-slate-500">Thời gian dự kiến</div>
-                <div className="font-bold text-slate-800">
+                <div className="text-[10px] text-slate-500 font-medium">Thời gian dự kiến</div>
+                <div className="font-extrabold text-slate-800">
                   {Math.round(currentPred.predicted_travel_time_seconds / 60)} phút
                 </div>
               </div>
@@ -119,15 +132,15 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
 
             <div className="flex items-center gap-2">
               {currentPred.trend === 'improving' ? (
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <TrendUp size={16} weight="bold" className="text-emerald-500" />
               ) : currentPred.trend === 'worsening' ? (
-                <TrendingDown className="w-4 h-4 text-rose-500" />
+                <TrendDown size={16} weight="bold" className="text-rose-500" />
               ) : (
-                <Minus className="w-4 h-4 text-slate-400" />
+                <Minus size={16} weight="bold" className="text-slate-400" />
               )}
               <div>
-                <div className="text-[11px] text-slate-500">Xu hướng</div>
-                <div className="font-bold capitalize text-slate-800">
+                <div className="text-[10px] text-slate-500 font-medium">Xu hướng</div>
+                <div className="font-extrabold text-slate-800">
                   {currentPred.trend === 'improving'
                     ? 'Cải thiện'
                     : currentPred.trend === 'worsening'
@@ -139,32 +152,32 @@ export const AiPredictionPanel: React.FC<AiPredictionPanelProps> = ({
           </div>
         </div>
 
-        {/* AI Confidence & Risk Tags */}
+        {/* Confidence & Risk */}
         <div className="flex items-center justify-between mt-3 text-xs px-1">
           <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+            <ShieldCheck size={14} weight="bold" className="text-blue-600" />
             <span>Độ tin cậy: <strong>{Math.round(currentPred.confidence_score * 100)}%</strong></span>
           </div>
-          <div className="flex items-center gap-1 font-medium">
+          <div>
             {currentPred.risk_factor === 'high' ? (
-              <span className="flex items-center gap-1 text-rose-600">
-                <AlertTriangle className="w-3.5 h-3.5" /> Nguy cơ tắc đường cao
+              <span className="flex items-center gap-1 text-rose-600 font-bold">
+                <Warning size={14} weight="bold" /> Nguy cơ tắc đường cao
               </span>
             ) : currentPred.risk_factor === 'medium' ? (
-              <span className="flex items-center gap-1 text-amber-600">
-                <AlertTriangle className="w-3.5 h-3.5" /> Nguy cơ vừa phải
+              <span className="flex items-center gap-1 text-amber-600 font-bold">
+                <Warning size={14} weight="bold" /> Nguy cơ vừa phải
               </span>
             ) : (
-              <span className="text-emerald-600">Rủi ro thấp</span>
+              <span className="text-emerald-600 font-bold">Rủi ro thấp</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Actionable Civic Tech Recommendation */}
-      <div className="mt-4 p-3 bg-blue-50/70 rounded-xl border border-blue-100 flex items-start gap-2.5">
-        <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-900 leading-relaxed font-medium">
+      {/* Actionable Civic Recommendation */}
+      <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 flex items-start gap-2.5">
+        <LightbulbFilament size={16} weight="fill" className="text-blue-600 shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-950 font-medium leading-relaxed">
           {prediction.recommendation}
         </p>
       </div>

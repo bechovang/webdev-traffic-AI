@@ -1,5 +1,14 @@
 import React from 'react';
-import { Sliders, Sun, Sunset, CloudRain, AlertOctagon, RotateCcw } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  Sun,
+  SunHorizon,
+  CloudRain,
+  WarningOctagon,
+  ArrowCounterClockwise,
+  CheckCircle,
+} from '@phosphor-icons/react';
+import { tokens } from '../tokens';
 
 interface SimulationControlsProps {
   currentScenario: string;
@@ -16,57 +25,65 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
     {
       id: 'normal',
       name: 'Bình thường',
-      desc: 'Lưu thông thông suốt ngoài giờ',
-      icon: RotateCcw,
-      badgeColor: 'hover:border-emerald-300',
+      desc: 'Lưu thông thông suốt, tốc độ chuẩn',
+      icon: ArrowCounterClockwise,
+      color: tokens.colors.los.A,
     },
     {
       id: 'morning_rush',
       name: 'Cao điểm Sáng',
-      desc: '7h - 9h: Ùn ứ các tuyến vào trung tâm',
+      desc: '07:00 - 09:00: Dòng xe hướng vào trung tâm',
       icon: Sun,
-      badgeColor: 'hover:border-amber-300',
+      color: tokens.colors.los.C,
     },
     {
       id: 'evening_rush',
       name: 'Cao điểm Chiều',
-      desc: '17h - 19h: Kẹt xe các cửa ngõ & cảng Cát Lái',
-      icon: Sunset,
-      badgeColor: 'hover:border-orange-300',
+      desc: '17:00 - 19:30: Kẹt xe cửa ngõ & cảng Cát Lái',
+      icon: SunHorizon,
+      color: tokens.colors.los.E,
     },
     {
       id: 'accident',
       name: 'Sự cố Va chạm',
       desc: 'Tắc nghẽn tại Phạm Văn Đồng & Võ Nguyên Giáp',
-      icon: AlertOctagon,
-      badgeColor: 'hover:border-rose-300',
+      icon: WarningOctagon,
+      color: tokens.colors.los.F,
     },
     {
       id: 'rain',
       name: 'Mưa lớn / Ngập',
-      desc: 'Tốc độ đô thị giảm đồng loạt 40%',
+      desc: 'Tốc độ đô thị giảm 35-45% diện rộng',
       icon: CloudRain,
-      badgeColor: 'hover:border-blue-300',
+      color: tokens.colors.brand.primary,
     },
   ];
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
-      <div className="flex items-center justify-between mb-3.5">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-            <Sliders className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Bảng Điều Khiển Mô Phỏng (Demo Studio)</h3>
-            <p className="text-xs text-slate-500 font-medium">
-              Chuyển đổi các kịch bản thực tế để kiểm tra khả năng phản ứng và dự báo của AI
-            </p>
-          </div>
+    <div className="flex flex-col h-full space-y-3">
+      {/* Header Info */}
+      <div className="flex items-center gap-2.5 pb-2 border-b border-slate-200/60">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs"
+          style={{
+            backgroundColor: `${tokens.colors.brand.primary}15`,
+            color: tokens.colors.brand.primary,
+          }}
+        >
+          <SlidersHorizontal size={18} weight="duotone" />
+        </div>
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            Kịch bản Mô phỏng (Demo Studio)
+          </h3>
+          <p className="text-[11px] text-slate-500 font-medium">
+            Kiểm tra khả năng phản ứng & dự báo suy giảm của AI
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      {/* Scenarios List */}
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
         {scenarios.map((sc) => {
           const Icon = sc.icon;
           const isActive = currentScenario === sc.id;
@@ -75,22 +92,46 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
               key={sc.id}
               onClick={() => onSelectScenario(sc.id)}
               disabled={isLoading}
-              className={`p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${sc.badgeColor} ${
+              className={`w-full p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer flex items-start gap-3 relative ${
                 isActive
-                  ? 'border-blue-500 bg-blue-50/50 shadow-xs ring-1 ring-blue-500/20'
-                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                  ? 'border-blue-500 bg-blue-50/70 shadow-sm ring-1 ring-blue-500/20'
+                  : 'border-slate-200/80 bg-white/60 hover:bg-white hover:border-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-xs text-slate-900">{sc.name}</span>
-                <Icon
-                  className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
-                />
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                style={{
+                  backgroundColor: `${sc.color}18`,
+                  color: sc.color,
+                }}
+              >
+                <Icon size={18} weight={isActive ? 'fill' : 'bold'} />
               </div>
-              <p className="text-[11px] text-slate-500 leading-tight font-medium">{sc.desc}</p>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <span className={`text-xs font-bold ${isActive ? 'text-blue-900' : 'text-slate-800'}`}>
+                    {sc.name}
+                  </span>
+                  {isActive && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-100/70 px-1.5 py-0.5 rounded-full">
+                      <CheckCircle size={11} weight="fill" />
+                      Đang kích hoạt
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                  {sc.desc}
+                </p>
+              </div>
             </button>
           );
         })}
+      </div>
+
+      {/* Info notice */}
+      <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60 text-[10px] text-slate-500 font-medium">
+        Tác động thay đổi trực tiếp luồng dữ liệu WebSocket và mô hình dự báo AI theo thời gian thực.
       </div>
     </div>
   );
