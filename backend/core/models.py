@@ -206,3 +206,40 @@ class RoutePrediction(BaseModel):
 class SimulationScenarioRequest(BaseModel):
     scenario: str = Field(..., description="normal, morning_rush, evening_rush, accident, rain")
     affected_routes: Optional[List[str]] = None
+
+
+# ==========================================
+# Dynamic Route Planning & Places Models
+# ==========================================
+
+class PlaceSuggestion(BaseModel):
+    name: str
+    address: str
+    lat: float
+    lng: float
+
+
+class DynamicRoutePlanRequest(BaseModel):
+    origin_name: str = "Điểm xuất phát"
+    origin_lat: float
+    origin_lng: float
+    dest_name: str = "Điểm đến"
+    dest_lat: float
+    dest_lng: float
+
+
+class DynamicRoutePlanResult(BaseModel):
+    origin: PlaceSuggestion
+    destination: PlaceSuggestion
+    distance_km: float
+    travel_time_seconds: int
+    travel_time_minutes: float
+    traffic_delay_minutes: float
+    current_speed: float
+    free_flow_speed: float
+    congestion_level: str
+    los: str
+    geometry: List[List[float]]  # [[lat, lng], [lat, lng], ...]
+    predictions: List[PredictionHorizon]
+    recommendation: str
+

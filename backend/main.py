@@ -8,15 +8,20 @@ from typing import List, Set
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.config.settings import get_config
+from backend.core.api_client import TrafficAPIClient
 from backend.core.models import (
+    DynamicRoutePlanRequest,
+    DynamicRoutePlanResult,
     LiveTrafficMetric,
+    PlaceSuggestion,
     RouteInfo,
     RoutePrediction,
     SimulationScenarioRequest,
     SystemSummary,
 )
 from backend.services.ai_engine import ai_engine
-from backend.services.traffic_service import traffic_service
+from backend.services.traffic_service import VIETNAM_TZ, traffic_service
 
 
 class ConnectionManager:
@@ -178,6 +183,104 @@ async def trigger_poll_now():
         "summary": summary,
     })
     return {"status": "ok", "refreshed_routes": len(metrics)}
+
+
+# ==========================================
+# Google Maps Navigation & Dynamic Routing
+# ==========================================
+
+_api_client = None
+
+def get_tomtom_client() -> TrafficAPIClient:
+    global _api_client
+    if _api_client is None:
+        cfg = get_config()
+        _api_client = TrafficAPIClient(cfg.tomtom_api_key)
+    return _api_client
+
+
+@app.get("/api/places/search", response_model=List[PlaceSuggestion])
+def search_places(query: str):
+    """Searches locations and POIs via TomTom Search API with bias to TP.HCM."""
+    client = get_tomtom_client()
+    return client.search_places(query)
+
+
+@app.get("/api/places/reverse")
+def reverse_geocode(lat: float, lng: float):
+    """Resolves coordinates into a human-readable street address."""
+    client = get_tomtom_client()
+    address = client.reverse_geocode(lat, lng)
+    return {"address": address, "lat": lat, "lng": lng}
+
+
+@app.post("/api/routes/plan", response_model=DynamicRoutePlanResult)
+def plan_dynamic_route(req: DynamicRoutePlanRequest):
+    """Calculates full navigation route, curved road geometry, traffic delay, and AI forecast."""
+    client = get_tomtom_client()
+    route_calc = client.plan_dynamic_route(
+        origin_lat=req.origin_lat,
+        origin_lng=req.origin_lng,
+        dest_lat=req.dest_lat,
+        dest_lng=req.dest_lng,
+    )
+
+    # Reverse geocode if default names
+    origin_name = req.origin_name
+    dest_name = req.dest_name
+    if origin_name in ["", "Điểm xuất phát", "Vị trí đã chọn"]:
+        origin_name = client.reverse_geocode(req.origin_lat, req.origin_lng)
+    if dest_name in ["", "Điểm đến", "Vị trí đã chọn"]:
+        dest_name = client.reverse_geocode(req.dest_lat, req.dest_lng)
+
+    # Run AI Traffic Engine for this dynamic route
+    now_iso = datetime.now(VIETNAM_TZ).isoformat() if "datetime" in globals() else ""
+    from datetime import datetime
+    now_iso = datetime.now(VIETNAM_TZ).isoformat()
+    mock_metric = LiveTrafficMetric(
+        timestamp=now_iso,
+        route_id="dynamic_route",
+        route_name=f"{origin_name} ➔ {dest_name}",
+        origin_lat=req.origin_lat,
+        origin_lng=req.origin_lng,
+        dest_lat=req.dest_lat,
+        dest_lng=req.dest_lng,
+        current_speed=route_calc["current_speed"],
+        free_flow_speed=route_calc["free_flow_speed"],
+        travel_time_seconds=route_calc["travel_time_seconds"],
+        congestion_level=route_calc["congestion_level"],
+        los=route_calc["los"],
+        congestion_ratio=round(route_calc["current_speed"] / max(1.0, route_calc["free_flow_speed"]), 2),
+    )
+
+    ai_pred = ai_engine.predict_route(mock_metric, [])
+
+    return DynamicRoutePlanResult(
+        origin=PlaceSuggestion(
+            name=origin_name,
+            address=origin_name,
+            lat=req.origin_lat,
+            lng=req.origin_lng,
+        ),
+        destination=PlaceSuggestion(
+            name=dest_name,
+            address=dest_name,
+            lat=req.dest_lat,
+            lng=req.dest_lng,
+        ),
+        distance_km=route_calc["distance_km"],
+        travel_time_seconds=route_calc["travel_time_seconds"],
+        travel_time_minutes=route_calc["travel_time_minutes"],
+        traffic_delay_minutes=route_calc["traffic_delay_minutes"],
+        current_speed=route_calc["current_speed"],
+        free_flow_speed=route_calc["free_flow_speed"],
+        congestion_level=route_calc["congestion_level"],
+        los=route_calc["los"],
+        geometry=route_calc["geometry"],
+        predictions=ai_pred.predictions,
+        recommendation=ai_pred.recommendation,
+    )
+
 
 
 @app.websocket("/ws/traffic")

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Header } from './components/Header';
 import { TrafficMap } from './components/TrafficMap';
 import { FloatingHud } from './components/FloatingHud';
@@ -6,67 +6,50 @@ import {
   getLatestMetrics,
   getSystemSummary,
   getRouteHistory,
-  getRoutePrediction,
   triggerPollNow,
   setSimulationScenario,
+  reverseGeocode,
 } from './services/api';
-import type { LiveTrafficMetric, RoutePrediction, SystemSummary } from './types';
+import type {
+  DynamicRoutePlanResult,
+  LiveTrafficMetric,
+  PlaceSuggestion,
+  SystemSummary,
+} from './types';
 
 export function App() {
   const [metrics, setMetrics] = useState<LiveTrafficMetric[]>([]);
   const [summary, setSummary] = useState<SystemSummary | null>(null);
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>('route_001');
-  const [prediction, setPrediction] = useState<RoutePrediction | null>(null);
   const [historyData, setHistoryData] = useState<LiveTrafficMetric[]>([]);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [currentScenario, setCurrentScenario] = useState<string>('normal');
-  const [isLoadingPrediction, setIsLoadingPrediction] = useState<boolean>(false);
+
+  // Dynamic Google Maps Route Planning States
+  const [activeRoutePlan, setActiveRoutePlan] = useState<DynamicRoutePlanResult | null>(null);
+  const [isMapPicking, setIsMapPicking] = useState<'origin' | 'dest' | null>(null);
+  const [pickedPoint, setPickedPoint] = useState<{ mode: 'origin' | 'dest'; place: PlaceSuggestion } | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Load prediction & history for selected route
-  const loadRouteDetails = useCallback(async (routeId: string) => {
-    setIsLoadingPrediction(true);
-    try {
-      const [pred, hist] = await Promise.all([
-        getRoutePrediction(routeId),
-        getRouteHistory(routeId, 30),
-      ]);
-      setPrediction(pred);
-      setHistoryData(hist);
-    } catch (err) {
-      console.error('Error loading route details:', err);
-    } finally {
-      setIsLoadingPrediction(false);
-    }
-  }, []);
-
-  // Fetch initial REST data
+  // Fetch initial telemetry
   useEffect(() => {
     const initData = async () => {
       try {
         const [m, s] = await Promise.all([getLatestMetrics(), getSystemSummary()]);
         setMetrics(m);
         setSummary(s);
-        if (m.length > 0 && !selectedRouteId) {
-          setSelectedRouteId(m[0].route_id);
+        if (m.length > 0) {
+          getRouteHistory(m[0].route_id, 30).then(setHistoryData).catch(() => {});
         }
       } catch (err) {
         console.error('Initial data fetch error:', err);
       }
     };
     initData();
-  }, [selectedRouteId]);
+  }, []);
 
-  // Load details whenever selected route changes
-  useEffect(() => {
-    if (selectedRouteId) {
-      loadRouteDetails(selectedRouteId);
-    }
-  }, [selectedRouteId, loadRouteDetails]);
-
-  // WebSocket Connection
+  // WebSocket Connection for background traffic & scenario changes
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
@@ -92,11 +75,6 @@ export function App() {
           if (data.scenario) {
             setCurrentScenario(data.scenario);
           }
-          // Refresh details if currently selected route got updated
-          if (selectedRouteId) {
-            getRouteHistory(selectedRouteId, 30).then(setHistoryData).catch(() => {});
-            getRoutePrediction(selectedRouteId).then(setPrediction).catch(() => {});
-          }
         } catch (e) {
           console.error('WS parse error:', e);
         }
@@ -121,7 +99,7 @@ export function App() {
         wsRef.current.close();
       }
     };
-  }, [selectedRouteId]);
+  }, []);
 
   // Handler: Poll Now
   const handlePollNow = async () => {
@@ -140,21 +118,46 @@ export function App() {
     setCurrentScenario(scenario);
     try {
       await setSimulationScenario(scenario);
-      if (selectedRouteId) {
-        loadRouteDetails(selectedRouteId);
-      }
     } catch (err) {
       console.error('Scenario change error:', err);
     }
   };
 
+  // Handler: Click anywhere on map when picking origin/destination
+  const handleMapClickPick = async (lat: number, lng: number) => {
+    if (!isMapPicking) return;
+    try {
+      const geo = await reverseGeocode(lat, lng);
+      setPickedPoint({
+        mode: isMapPicking,
+        place: {
+          name: geo.address,
+          address: geo.address,
+          lat,
+          lng,
+        },
+      });
+    } catch {
+      setPickedPoint({
+        mode: isMapPicking,
+        place: {
+          name: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+          address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+          lat,
+          lng,
+        },
+      });
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-900 select-none">
-      {/* Central Full-Bleed Map Viewport */}
+      {/* Central Full-Bleed Map Viewport (Interactive Google Maps Navigation) */}
       <TrafficMap
-        metrics={metrics}
-        selectedRouteId={selectedRouteId}
-        onSelectRoute={setSelectedRouteId}
+        activeRoutePlan={activeRoutePlan}
+        isMapPicking={isMapPicking}
+        onMapClickPick={handleMapClickPick}
+        onCancelMapPick={() => setIsMapPicking(null)}
       />
 
       {/* Floating Header Island (Top) */}
@@ -167,18 +170,19 @@ export function App() {
         onSelectScenario={handleSelectScenario}
       />
 
-      {/* Floating HUD Drawer (Left) */}
+      {/* Floating Google Maps Navigation & Planning HUD (Left) */}
       <FloatingHud
         metrics={metrics}
         summary={summary}
-        selectedRouteId={selectedRouteId}
-        onSelectRoute={setSelectedRouteId}
-        prediction={prediction}
-        isLoadingPrediction={isLoadingPrediction}
         historyData={historyData}
         currentScenario={currentScenario}
         onSelectScenario={handleSelectScenario}
         isScenarioLoading={isPolling}
+        onRouteCalculated={setActiveRoutePlan}
+        activeRoutePlan={activeRoutePlan}
+        isMapPicking={isMapPicking}
+        onSetMapPicking={setIsMapPicking}
+        pickedPoint={pickedPoint}
       />
     </div>
   );

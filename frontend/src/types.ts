@@ -57,3 +57,36 @@ export interface RoutePrediction {
   predictions: PredictionHorizon[];
   recommendation: string;
 }
+
+export interface PlaceSuggestion {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+export interface DynamicRoutePlanRequest {
+  origin_name?: string;
+  origin_lat: number;
+  origin_lng: number;
+  dest_name?: string;
+  dest_lat: number;
+  dest_lng: number;
+}
+
+export interface DynamicRoutePlanResult {
+  origin: PlaceSuggestion;
+  destination: PlaceSuggestion;
+  distance_km: number;
+  travel_time_seconds: number;
+  travel_time_minutes: number;
+  traffic_delay_minutes: number;
+  current_speed: number;
+  free_flow_speed: number;
+  congestion_level: string;
+  los: string;
+  geometry: [number, number][];
+  predictions: PredictionHorizon[];
+  recommendation: string;
+}
+

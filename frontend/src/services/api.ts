@@ -1,4 +1,12 @@
-import type { LiveTrafficMetric, RouteInfo, RoutePrediction, SystemSummary } from '../types';
+import type {
+  DynamicRoutePlanRequest,
+  DynamicRoutePlanResult,
+  LiveTrafficMetric,
+  PlaceSuggestion,
+  RouteInfo,
+  RoutePrediction,
+  SystemSummary,
+} from '../types';
 
 const API_BASE =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -50,3 +58,38 @@ export async function triggerPollNow(): Promise<void> {
   });
   if (!res.ok) throw new Error('Failed to trigger poll');
 }
+
+export async function searchPlaces(query: string): Promise<PlaceSuggestion[]> {
+  if (!query || query.trim().length < 2) return [];
+  try {
+    const res = await fetch(`${API_BASE}/api/places/search?query=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<{ address: string; lat: number; lng: number }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/places/reverse?lat=${lat}&lng=${lng}`);
+    if (!res.ok) return { address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+    return res.json();
+  } catch {
+    return { address: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+  }
+}
+
+export async function planDynamicRoute(req: DynamicRoutePlanRequest): Promise<DynamicRoutePlanResult> {
+  const res = await fetch(`${API_BASE}/api/routes/plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Không thể tìm đường');
+  }
+  return res.json();
+}
+
