@@ -3,12 +3,12 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
-from typing import Dict, List, Set
+from typing import List, Set
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.models import (
+from backend.core.models import (
     LiveTrafficMetric,
     RouteInfo,
     RoutePrediction,
@@ -52,7 +52,6 @@ async def background_telemetry_broadcaster():
         try:
             await asyncio.sleep(8)
             if manager.active_connections:
-                # Slight realistic jitter or simulation step
                 traffic_service.generate_simulated_snapshot()
                 metrics = [m.model_dump() for m in traffic_service.get_latest_metrics()]
                 summary = traffic_service.get_system_summary().model_dump()
@@ -63,16 +62,14 @@ async def background_telemetry_broadcaster():
                 })
         except asyncio.CancelledError:
             break
-        except Exception as e:
+        except Exception:
             await asyncio.sleep(2)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     task = asyncio.create_task(background_telemetry_broadcaster())
     yield
-    # Shutdown
     task.cancel()
     try:
         await task
@@ -156,7 +153,7 @@ def predict_all_routes():
 
 @app.post("/api/simulation/scenario")
 async def trigger_simulation_scenario(req: SimulationScenarioRequest):
-    """Applies a simulation scenario (morning_rush, evening_rush, accident, normal)."""
+    """Applies a simulation scenario (morning_rush, evening_rush, accident, rain, normal)."""
     traffic_service.set_scenario(req.scenario, req.affected_routes)
     metrics = [m.model_dump() for m in traffic_service.get_latest_metrics()]
     summary = traffic_service.get_system_summary().model_dump()
@@ -188,7 +185,6 @@ async def websocket_traffic_endpoint(websocket: WebSocket):
     """WebSocket connection streaming real-time traffic updates."""
     await manager.connect(websocket)
     try:
-        # Send initial snapshot immediately upon connect
         metrics = [m.model_dump() for m in traffic_service.get_latest_metrics()]
         summary = traffic_service.get_system_summary().model_dump()
         await websocket.send_text(json.dumps({
@@ -198,7 +194,6 @@ async def websocket_traffic_endpoint(websocket: WebSocket):
         }, ensure_ascii=False))
 
         while True:
-            # Keep socket alive and accept client commands if any
             data = await websocket.receive_text()
             try:
                 cmd = json.loads(data)

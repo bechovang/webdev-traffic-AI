@@ -1,7 +1,7 @@
 """Full-stack Application Runner for HCM Traffic AI Intelligence.
 
 Launches both FastAPI Backend (port 8000) and React Frontend (port 5173).
-Press Ctrl+C to gracefully terminate both services.
+Press Ctrl+C to stop both services.
 """
 
 import os
@@ -13,7 +13,7 @@ import webbrowser
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
-PYTHON_EXE = ROOT_DIR / "traffic_scraper" / ".venv" / "Scripts" / "python.exe"
+PYTHON_EXE = ROOT_DIR / ".venv" / "Scripts" / "python.exe"
 
 if not PYTHON_EXE.exists():
     PYTHON_EXE = Path(sys.executable)
@@ -23,39 +23,32 @@ def main():
     print("=" * 65)
     print("🚦 HCM CITY TRAFFIC INTELLIGENCE DASHBOARD — TP. THỦ ĐỨC")
     print("=" * 65)
-    print(f"[*] Python Runtime: {PYTHON_EXE}")
-    print("[*] Starting FastAPI Backend on http://127.0.0.1:8000 ...")
+    print(f"[*] Python: {PYTHON_EXE}")
 
+    # 1. Start Backend
+    print("[*] Khởi động Backend (FastAPI) tại http://127.0.0.1:8000 ...")
     backend_proc = subprocess.Popen(
         [str(PYTHON_EXE), str(ROOT_DIR / "backend" / "run.py")],
         cwd=str(ROOT_DIR),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
     )
 
-    # Wait 2 seconds for backend to start
-    time.sleep(2)
+    time.sleep(1.5)
 
-    print("[*] Starting React Frontend on http://127.0.0.1:5173 ...")
+    # 2. Start Frontend
+    print("[*] Khởi động Frontend (React + Vite) tại http://127.0.0.1:5173 ...")
     npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
     frontend_proc = subprocess.Popen(
         [npm_cmd, "run", "dev"],
         cwd=str(ROOT_DIR / "frontend"),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
+        shell=True if os.name == "nt" else False,
     )
 
-    print("\n✅ Hệ thống đã sẵn sàng!")
+    print("\n✅ Cả 2 dịch vụ đang chạy!")
     print("👉 Giao diện Dashboard: http://127.0.0.1:5173")
     print("👉 Swagger API Docs:    http://127.0.0.1:8000/docs")
-    print("👉 WebSocket Stream:    ws://127.0.0.1:8000/ws/traffic")
-    print("\n[i] Nhấn Ctrl+C để dừng toàn bộ hệ thống.\n")
+    print("\n[i] Đang tự động mở trình duyệt web... (Nhấn Ctrl+C để dừng cả 2 dịch vụ)\n")
 
-    # Open browser
+    time.sleep(1.5)
     try:
         webbrowser.open("http://127.0.0.1:5173")
     except Exception:
@@ -66,12 +59,12 @@ def main():
         try:
             backend_proc.terminate()
             frontend_proc.terminate()
-            backend_proc.wait(timeout=3)
-            frontend_proc.wait(timeout=3)
+            backend_proc.wait(timeout=2)
+            frontend_proc.wait(timeout=2)
         except Exception:
             backend_proc.kill()
             frontend_proc.kill()
-        print("[*] Đã tắt thành công.")
+        print("[*] Đã tắt toàn bộ dịch vụ.")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
@@ -79,14 +72,11 @@ def main():
 
     try:
         while True:
-            # Poll status
             if backend_proc.poll() is not None:
-                print("[!] Backend dừng đột ngột:")
-                print(backend_proc.stdout.read())
+                print("[!] Backend đã dừng.")
                 break
             if frontend_proc.poll() is not None:
-                print("[!] Frontend dừng đột ngột:")
-                print(frontend_proc.stdout.read())
+                print("[!] Frontend đã dừng.")
                 break
             time.sleep(1)
     except KeyboardInterrupt:

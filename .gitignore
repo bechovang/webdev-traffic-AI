@@ -47,6 +47,8 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
+backend/.venv/
 env/
 ENV/
 
@@ -67,6 +69,7 @@ excalidraw.log
 
 # Skill manifests (avoid conflicts)
 _bmad/
+.playwright-mcp/
 
 # data and api docs
 data traffic hcm/

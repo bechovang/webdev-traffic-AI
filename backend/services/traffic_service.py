@@ -1,29 +1,35 @@
-"""Traffic Service managing real-time data, simulation states, and scraper integration."""
+"""Central Traffic Service managing corridors metadata, telemetry, and simulation states."""
 
 import csv
 import glob
-import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 import yaml
 
-from backend.models import Coordinates, LiveTrafficMetric, RouteInfo, SystemSummary
-from traffic_scraper.src.models import calculate_congestion_level, calculate_los
+from backend.config.settings import get_config
+from backend.core.models import (
+    Coordinates,
+    LiveTrafficMetric,
+    RouteInfo,
+    SystemSummary,
+    calculate_congestion_level,
+    calculate_los,
+)
 
 VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 class TrafficService:
-    """Core service for routes metadata, telemetry, and live simulation."""
+    """Core service managing real-time and historical telemetry across all corridors."""
 
     def __init__(self):
-        self.root_dir = Path(__file__).resolve().parent.parent.parent
-        self.scraper_dir = self.root_dir / "traffic_scraper"
-        self.routes_yaml_path = self.scraper_dir / "config" / "routes.yaml"
-        self.data_dir = self.scraper_dir / "data" / "scraped_data"
+        self.config = get_config()
+        self.base_dir = self.config.base_dir
+        self.routes_yaml_path = self.base_dir / "config" / "routes.yaml"
+        self.data_dir = self.base_dir / self.config.data_dir
 
         self.routes_dict: Dict[str, RouteInfo] = {}
         self.live_telemetry: Dict[str, LiveTrafficMetric] = {}
@@ -35,7 +41,7 @@ class TrafficService:
         self._initialize_telemetry()
 
     def _load_routes(self) -> None:
-        """Loads routes definitions from routes.yaml."""
+        """Loads corridors from routes.yaml."""
         if not self.routes_yaml_path.exists():
             raise FileNotFoundError(f"Cannot find routes.yaml at {self.routes_yaml_path}")
 
@@ -55,13 +61,13 @@ class TrafficService:
             self.historical_buffer[route.id] = []
 
     def _initialize_telemetry(self) -> None:
-        """Loads real historical CSV if available, otherwise generates initial state."""
-        loaded_from_csv = self._load_latest_csv()
-        if not loaded_from_csv:
+        """Initializes telemetry from latest CSV if available, or generates snapshot."""
+        loaded = self._load_latest_csv()
+        if not loaded:
             self.generate_simulated_snapshot()
 
     def _load_latest_csv(self) -> bool:
-        """Attempts to load the most recent scraped CSV."""
+        """Attempts to load newest scraped CSV file."""
         if not self.data_dir.exists():
             return False
 
@@ -69,16 +75,13 @@ class TrafficService:
         if not csv_files:
             return False
 
-        latest_file = csv_files[0]
         try:
-            with open(latest_file, "r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                rows = list(reader)
+            with open(csv_files[0], "r", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
 
             if not rows:
                 return False
 
-            # Keep last reading for each route
             by_route: Dict[str, Dict[str, Any]] = {}
             for r in rows:
                 by_route[r["route_id"]] = r
@@ -112,24 +115,19 @@ class TrafficService:
             return False
 
     def get_routes(self) -> List[RouteInfo]:
-        """Returns list of configured routes."""
         return list(self.routes_dict.values())
 
     def get_latest_metrics(self) -> List[LiveTrafficMetric]:
-        """Returns the most recent live telemetry for all routes."""
         return list(self.live_telemetry.values())
 
     def get_route_history(self, route_id: str, limit: int = 40) -> List[LiveTrafficMetric]:
-        """Returns historical time-series telemetry for a specific route."""
         return self.historical_buffer.get(route_id, [])[-limit:]
 
     def get_system_summary(self) -> SystemSummary:
-        """Calculates city-wide average KPIs across all monitored routes."""
         metrics = list(self.live_telemetry.values())
         if not metrics:
-            now_iso = datetime.now(VIETNAM_TZ).isoformat()
             return SystemSummary(
-                timestamp=now_iso,
+                timestamp=datetime.now(VIETNAM_TZ).isoformat(),
                 average_speed=40.0,
                 average_congestion_ratio=0.85,
                 congested_routes_count=0,
@@ -164,41 +162,33 @@ class TrafficService:
         )
 
     def set_scenario(self, scenario: str, affected_routes: Optional[List[str]] = None) -> None:
-        """Changes active simulation scenario and triggers new snapshot."""
         self.current_scenario = scenario
         self.custom_affected_routes = affected_routes or []
         self.generate_simulated_snapshot()
 
     def generate_simulated_snapshot(self) -> List[LiveTrafficMetric]:
-        """Generates realistic telemetry snapshot based on active scenario and adds to history."""
         now = datetime.now(VIETNAM_TZ)
         timestamp = now.isoformat()
 
         updated_metrics = []
         for route_id, route in self.routes_dict.items():
-            # Free flow baseline per route distance
             free_flow = 50.0 if "Phạm Văn Đồng" in route.name or "Xa Lộ" in route.name else 40.0
-
-            # Base speed multiplier based on scenario
             multiplier = 0.88 + random.uniform(-0.06, 0.06)
 
             if self.current_scenario == "morning_rush":
-                # Severe in inbound routes
                 if route_id in ["route_001", "route_002", "route_003", "route_007"]:
-                    multiplier = random.uniform(0.32, 0.46)  # Heavy jam
+                    multiplier = random.uniform(0.32, 0.46)
                 else:
                     multiplier = random.uniform(0.55, 0.70)
             elif self.current_scenario == "evening_rush":
-                # Severe in outbound routes & ports
                 if route_id in ["route_002", "route_004", "route_006", "route_009"]:
                     multiplier = random.uniform(0.28, 0.42)
                 else:
                     multiplier = random.uniform(0.50, 0.68)
             elif self.current_scenario == "accident":
-                # Specific hotspot accident
                 affected = self.custom_affected_routes or ["route_001", "route_009"]
                 if route_id in affected:
-                    multiplier = random.uniform(0.18, 0.28)  # Gridlock
+                    multiplier = random.uniform(0.18, 0.28)
                 else:
                     multiplier = random.uniform(0.80, 0.95)
             elif self.current_scenario == "rain":

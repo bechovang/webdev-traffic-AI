@@ -75,7 +75,8 @@ export function App() {
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
     const connectWs = () => {
-      const wsUrl = 'ws://127.0.0.1:8000/ws/traffic';
+      const host = window.location.hostname || '127.0.0.1';
+      const wsUrl = `ws://${host}:8000/ws/traffic`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

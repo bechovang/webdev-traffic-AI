@@ -1,4 +1,4 @@
-"""Logging setup for traffic scraper."""
+"""Logging setup for backend and scraper."""
 
 import json
 import logging
@@ -27,12 +27,12 @@ EXTRA_LOG_FIELDS = (
 
 
 def setup_logger(
-    name: str = "traffic_scraper",
+    name: str = "traffic_backend",
     level: str = "INFO",
     log_dir: str = "logs",
     format_json: bool = True,
 ) -> logging.Logger:
-    """Set up structured JSON logger for the application."""
+    """Sets up structured JSON logger with daily file rotation."""
     logger = logging.getLogger(name)
     log_level = getattr(logging, level.upper(), logging.INFO)
     logger.setLevel(log_level)
@@ -75,7 +75,6 @@ class JSONFormatter(logging.Formatter):
     """Custom JSON formatter for structured logging."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format log record as a JSON string."""
         log_data = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
             "level": record.levelname,
@@ -93,6 +92,6 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_data, ensure_ascii=False)
 
 
-def get_logger(name: str = "traffic_scraper") -> logging.Logger:
-    """Get or create a logger instance."""
+def get_logger(name: str = "traffic_backend") -> logging.Logger:
+    """Returns or creates logger instance."""
     return logging.getLogger(name)

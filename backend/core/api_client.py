@@ -1,4 +1,4 @@
-"""TomTom API client with retry logic for traffic scraper."""
+"""TomTom API client with exponential backoff retry logic."""
 
 from typing import Dict
 
@@ -10,8 +10,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.logger import get_logger
-from src.models import APIResponse, calculate_congestion_level, calculate_los
+from backend.core.logger import get_logger
+from backend.core.models import APIResponse, calculate_congestion_level, calculate_los
 
 logger = get_logger()
 
@@ -24,13 +24,11 @@ class TrafficAPIClient:
     """TomTom Traffic API client with automatic retry logic."""
 
     def __init__(self, api_key: str):
-        """Initialize API client."""
         self.api_key = api_key
         self.base_url = "https://api.tomtom.com/routing/1/calculateRoute"
         self.session = requests.Session()
 
     def close(self) -> None:
-        """Close the underlying HTTP session."""
         self.session.close()
 
     @retry(
@@ -47,7 +45,7 @@ class TrafficAPIClient:
         dest_lat: float,
         dest_lng: float,
     ) -> APIResponse:
-        """Fetch traffic data for a single route from TomTom API."""
+        """Fetches traffic flow data for a corridor from TomTom API."""
         origin = f"{origin_lat},{origin_lng}"
         destination = f"{dest_lat},{dest_lng}"
         url = f"{self.base_url}/{origin}:{destination}/json"
@@ -103,12 +101,13 @@ class TrafficAPIClient:
             return api_response
 
         except requests.exceptions.HTTPError as e:
-            status_code = e.response.status_code if e.response is not None else response.status_code
+            resp = e.response or locals().get("response")
+            status_code = resp.status_code if resp is not None else 0
             if status_code == 401:
                 logger.error("Authentication failed: Invalid API key")
                 raise TomTomAPIError("Invalid TomTom API key") from e
             if status_code == 403:
-                logger.error("Forbidden: API key does not have access to this resource")
+                logger.error("Forbidden: API key lacks required permissions")
                 raise TomTomAPIError("API key lacks required permissions") from e
             if status_code == 429:
                 logger.warning(f"Rate limit exceeded for {route_id}")
@@ -137,11 +136,9 @@ class TrafficAPIClient:
         dest_lat: float,
         dest_lng: float,
     ) -> Dict:
-        """Calculate speed, congestion ratio, and LOS metrics from an APIResponse."""
+        """Calculates velocities, congestion ratio, and LOS from an APIResponse."""
         if api_response.traffic_time_seconds <= 0 or api_response.travel_time_seconds <= 0:
-            raise TomTomAPIError(
-                f"Invalid travel/traffic duration for {api_response.route_id}"
-            )
+            raise TomTomAPIError(f"Invalid duration for route {api_response.route_id}")
 
         current_speed = (api_response.distance_meters / api_response.traffic_time_seconds) * 3.6
         free_flow_speed = (api_response.distance_meters / api_response.travel_time_seconds) * 3.6
@@ -149,17 +146,6 @@ class TrafficAPIClient:
         congestion_ratio = current_speed / free_flow_speed if free_flow_speed > 0 else 0.0
         los = calculate_los(congestion_ratio)
         congestion_level = calculate_congestion_level(los)
-
-        logger.debug(
-            "Calculated traffic metrics",
-            extra={
-                "route_id": api_response.route_id,
-                "current_speed": round(current_speed, 2),
-                "free_flow_speed": round(free_flow_speed, 2),
-                "congestion_ratio": round(congestion_ratio, 2),
-                "los": los,
-            },
-        )
 
         return {
             "route_id": api_response.route_id,

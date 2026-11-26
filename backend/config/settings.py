@@ -1,4 +1,4 @@
-"""Configuration loader and validator for traffic scraper."""
+"""Configuration loader and validator for unified backend."""
 
 import os
 from pathlib import Path
@@ -9,14 +9,22 @@ from dotenv import load_dotenv
 
 
 class Config:
-    """Configuration manager for traffic scraper."""
+    """Configuration manager for traffic backend and scraper."""
 
-    def __init__(self, env_path: Optional[Path] = None):
+    def __init__(self, env_path: Optional[Path] = None, base_dir: Optional[Path] = None):
         """Initialize configuration from environment and YAML files."""
-        load_dotenv(dotenv_path=env_path)
+        self.base_dir = base_dir or Path(__file__).resolve().parent.parent
 
-        self.base_dir = Path(__file__).resolve().parent.parent
-        self.tomtom_api_key = self._get_required_env("TOMTOM_API_KEY")
+        # Try to load .env from backend/ or project root
+        dotenv_target = env_path or (self.base_dir / ".env")
+        if not dotenv_target.exists():
+            root_dotenv = self.base_dir.parent / ".env"
+            if root_dotenv.exists():
+                dotenv_target = root_dotenv
+        load_dotenv(dotenv_path=dotenv_target)
+
+        # TomTom API Key (optional for simulation mode, mandatory for live scraper)
+        self.tomtom_api_key = os.getenv("TOMTOM_API_KEY", "")
 
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         self.data_dir = os.getenv("DATA_DIR", "data/scraped_data")
@@ -28,19 +36,18 @@ class Config:
         self.storage_config: Dict[str, Any] = yaml_config.get("storage", {})
         self.logging_config: Dict[str, Any] = yaml_config.get("logging", {})
 
-    def _get_required_env(self, key: str) -> str:
-        """Get required environment variable and reject placeholder values."""
-        value = os.getenv(key)
-        placeholder = f"your_{key.lower()}_here"
-        if not value or value.strip().lower() in {placeholder, ""}:
+    def get_required_api_key(self) -> str:
+        """Returns API key or raises error if not configured."""
+        placeholder = "your_tomtom_api_key_here"
+        if not self.tomtom_api_key or self.tomtom_api_key.strip().lower() in {placeholder, ""}:
             raise ValueError(
-                f"Required environment variable '{key}' is not set. "
+                "Required environment variable 'TOMTOM_API_KEY' is not set. "
                 "Please set it in your .env file."
             )
-        return value.strip()
+        return self.tomtom_api_key.strip()
 
     def _load_yaml_config(self) -> Dict[str, Any]:
-        """Load the main YAML configuration file once."""
+        """Loads the main YAML configuration file."""
         routes_file = self.base_dir / "config" / "routes.yaml"
         if not routes_file.exists():
             raise FileNotFoundError(f"Routes configuration file not found: {routes_file}")
@@ -49,7 +56,7 @@ class Config:
             return yaml.safe_load(f) or {}
 
     def _extract_and_validate_routes(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extract and validate route definitions from parsed YAML config."""
+        """Extracts and validates route definitions."""
         routes = config.get("routes", [])
         if not routes:
             raise ValueError("No routes defined in configuration file")
@@ -60,7 +67,7 @@ class Config:
         return routes
 
     def _validate_route(self, route: Dict[str, Any]) -> None:
-        """Validate a single route configuration."""
+        """Validates a single route definition."""
         required_fields = ["id", "name", "origin", "destination"]
         for field in required_fields:
             if field not in route:
@@ -78,21 +85,21 @@ class Config:
                 raise ValueError(f"Route {route['id']}: Invalid longitude {lng}")
 
     def get_interval_minutes(self) -> int:
-        """Get polling interval in minutes (env var overrides YAML)."""
+        """Returns polling interval in minutes."""
         env_interval = os.getenv("POLLING_INTERVAL_MINUTES")
         if env_interval:
             return int(env_interval)
         return int(self.scraper_config.get("interval_minutes", 15))
 
     def get_collection_days(self) -> int:
-        """Get collection duration in days (env var overrides YAML)."""
+        """Returns collection duration in days."""
         env_days = os.getenv("COLLECTION_DAYS")
         if env_days:
             return int(env_days)
         return int(self.scraper_config.get("collection_days", 7))
 
     def ensure_directories(self) -> None:
-        """Ensure all required output and log directories exist."""
+        """Ensures all required output and log directories exist."""
         directories = [
             self.base_dir / self.data_dir,
             self.base_dir / self.storage_config.get("reports_dir", "data/reports"),
@@ -106,7 +113,7 @@ _config: Optional[Config] = None
 
 
 def get_config() -> Config:
-    """Get or initialize the global configuration instance."""
+    """Returns singleton Config instance."""
     global _config
     if _config is None:
         _config = Config()

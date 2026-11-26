@@ -1,4 +1,4 @@
-"""APScheduler orchestration for traffic scraper."""
+"""APScheduler orchestration for periodic traffic data collection."""
 
 import signal
 import sys
@@ -9,10 +9,10 @@ from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config.settings import Config, get_config
-from src.api_client import TomTomAPIError, TrafficAPIClient
-from src.data_processor import DataProcessor, ValidationError
-from src.logger import get_logger
+from backend.config.settings import Config, get_config
+from backend.core.api_client import TomTomAPIError, TrafficAPIClient
+from backend.core.data_processor import DataProcessor, ValidationError
+from backend.core.logger import get_logger
 
 logger = get_logger()
 VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -22,7 +22,6 @@ class TrafficScheduler:
     """Scheduler for automated traffic data collection."""
 
     def __init__(self, config: Optional[Config] = None):
-        """Initialize the traffic scheduler."""
         self.config = config or get_config()
         self.scheduler: Optional[BackgroundScheduler] = None
         self.api_client: Optional[TrafficAPIClient] = None
@@ -37,16 +36,17 @@ class TrafficScheduler:
         signal.signal(signal.SIGTERM, self._signal_handler)
 
     def _signal_handler(self, signum, frame) -> None:
-        """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         self.stop()
 
     def start(self) -> None:
-        """Start the traffic scraper scheduler."""
         try:
             logger.info("Starting Traffic Scraper scheduler")
 
-            self.api_client = TrafficAPIClient(api_key=self.config.tomtom_api_key)
+            # Check API key
+            api_key = self.config.get_required_api_key()
+            self.api_client = TrafficAPIClient(api_key=api_key)
+
             failed_routes_file = self.config.storage_config.get(
                 "failed_routes_file", "data/failed_routes.csv"
             )
@@ -75,7 +75,7 @@ class TrafficScheduler:
                 minutes=interval_minutes,
                 end_date=end_date,
                 id="traffic_polling",
-                name="Poll all routes for traffic data",
+                name="Poll all corridors for traffic data",
                 replace_existing=True,
             )
 
@@ -90,7 +90,6 @@ class TrafficScheduler:
 
             self.scheduler.start()
             logger.info("Scheduler started successfully")
-
             logger.info("Running initial poll...")
             self._poll_all_routes()
 
@@ -99,7 +98,6 @@ class TrafficScheduler:
             sys.exit(1)
 
     def _poll_all_routes(self) -> None:
-        """Poll all configured routes for traffic data."""
         logger.info("Starting polling cycle for all routes")
         now = datetime.now(VIETNAM_TZ)
         timestamp = now.isoformat()
@@ -198,51 +196,25 @@ class TrafficScheduler:
             self._last_summary_date = today_str
 
     def _generate_daily_summary(self, date: datetime) -> None:
-        """Generate and save daily summary report."""
         logger.info(f"Generating daily summary for {date.strftime('%Y-%m-%d')}")
         try:
             summary = self.data_processor.generate_daily_summary(date)
             reports_dir = self.config.storage_config.get("reports_dir", "data/reports")
             reports_path = str(self.config.base_dir / reports_dir)
             self.data_processor.save_daily_summary(summary, reports_path)
-
-            logger.info(
-                "Daily summary generated",
-                extra={
-                    "total_polls": summary["total_polls"],
-                    "success_rate": summary["success_rate"],
-                },
-            )
+            logger.info("Daily summary generated", extra={"total_polls": summary["total_polls"]})
         except Exception as e:
             logger.error(f"Failed to generate daily summary: {str(e)}", exc_info=True)
 
     def stop(self) -> None:
-        """Stop the scheduler gracefully."""
         if self.scheduler and self.scheduler.running:
             logger.info("Stopping scheduler...")
             self.scheduler.shutdown(wait=True)
-
             if self.api_client:
                 self.api_client.close()
-
-            success_rate = (
-                (self.successful_polls / self.total_polls * 100)
-                if self.total_polls > 0
-                else 0.0
-            )
-            logger.info(
-                "Scheduler stopped. Final statistics:",
-                extra={
-                    "total_polls": self.total_polls,
-                    "successful_polls": self.successful_polls,
-                    "failed_polls": self.failed_polls,
-                    "success_rate": round(success_rate, 2),
-                },
-            )
             sys.exit(0)
 
     def run_forever(self) -> None:
-        """Run the scheduler indefinitely until interrupted."""
         try:
             logger.info("Press Ctrl+C to stop the scheduler")
             while True:

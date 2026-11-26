@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "traffic-backend"
+version = "1.0.0"
+description = "Consolidated backend: FastAPI, WebSocket streaming, AI prediction, and TomTom traffic scraper."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["..", "."]
+testpaths = ["tests"]
+addopts = "-v"

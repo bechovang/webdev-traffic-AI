@@ -1,12 +1,12 @@
-"""Data validation and storage for traffic scraper."""
+"""Data validation, deduplication, and CSV daily storage."""
 
 import csv
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from src.logger import get_logger
-from src.models import CSV_HEADERS, FAILED_ROUTES_HEADERS, TrafficData
+from backend.core.logger import get_logger
+from backend.core.models import CSV_HEADERS, FAILED_ROUTES_HEADERS, TrafficData
 
 logger = get_logger()
 
@@ -16,17 +16,16 @@ class ValidationError(Exception):
 
 
 class DataProcessor:
-    """Handle data validation and CSV storage for traffic data."""
+    """Handles data validation and CSV storage for traffic data."""
 
     def __init__(self, data_dir: str, failed_routes_file: Optional[str] = None):
-        """Initialize data processor."""
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.failed_routes_file = failed_routes_file or "data/failed_routes.csv"
         self._existing_records: set[str] = set()
 
     def validate_record(self, record: Dict[str, Any]) -> TrafficData:
-        """Validate a traffic data record and return a TrafficData instance."""
+        """Validates record schema and value bounds."""
         required_fields = [
             "timestamp",
             "route_id",
@@ -77,7 +76,7 @@ class DataProcessor:
         return TrafficData(**record)
 
     def check_duplicate(self, record: TrafficData) -> bool:
-        """Check if record already exists in the current session."""
+        """Deduplicates records within the active session."""
         key = f"{record.route_id}_{record.timestamp}"
         if key in self._existing_records:
             logger.warning(f"Duplicate record detected: {key}")
@@ -86,7 +85,7 @@ class DataProcessor:
         return False
 
     def save_to_csv(self, record: TrafficData) -> str:
-        """Save a single traffic data record to its daily CSV file."""
+        """Saves a traffic data record to its daily CSV file."""
         try:
             record_dt = datetime.fromisoformat(record.timestamp.replace("Z", "+00:00"))
         except ValueError:
@@ -112,7 +111,6 @@ class DataProcessor:
                 },
             )
             return str(filepath)
-
         except IOError as e:
             logger.error(f"Failed to write to CSV file {filepath}: {str(e)}")
             raise
@@ -126,7 +124,7 @@ class DataProcessor:
         retry_attempts: int,
         failed_routes_file: Optional[str] = None,
     ) -> None:
-        """Log a failed route to the dead letter queue CSV file."""
+        """Logs a failed route to the dead letter queue."""
         filepath = Path(failed_routes_file or self.failed_routes_file)
         filepath.parent.mkdir(parents=True, exist_ok=True)
         file_exists = filepath.exists()
@@ -136,12 +134,10 @@ class DataProcessor:
                 writer = csv.writer(f)
                 if not file_exists:
                     writer.writerow(FAILED_ROUTES_HEADERS)
-
                 timestamp = datetime.now().astimezone().isoformat()
                 writer.writerow(
                     [timestamp, route_id, route_name, error_type, error_message, retry_attempts]
                 )
-
             logger.warning(
                 "Logged failed route to dead letter queue",
                 extra={
@@ -154,7 +150,7 @@ class DataProcessor:
             logger.error(f"Failed to write to failed routes file: {str(e)}")
 
     def generate_daily_summary(self, date: datetime) -> Dict[str, Any]:
-        """Generate daily summary statistics from the daily CSV file."""
+        """Generates summary statistics for a given date."""
         date_str = date.strftime("%Y%m%d")
         filepath = self.data_dir / f"traffic_data_{date_str}.csv"
 
@@ -168,23 +164,17 @@ class DataProcessor:
             }
 
         total_polls = 0
-        failed = 0
-
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for _ in reader:
                     total_polls += 1
-
-            successful = total_polls - failed
-            success_rate = (successful / total_polls * 100) if total_polls > 0 else 0.0
-
             return {
                 "date": date_str,
                 "total_polls": total_polls,
-                "successful": successful,
-                "failed": failed,
-                "success_rate": round(success_rate, 2),
+                "successful": total_polls,
+                "failed": 0,
+                "success_rate": 100.0 if total_polls > 0 else 0.0,
             }
         except IOError as e:
             logger.error(f"Failed to read data file for summary: {str(e)}")
@@ -197,19 +187,16 @@ class DataProcessor:
             }
 
     def save_daily_summary(self, summary: Dict[str, Any], reports_dir: str) -> None:
-        """Save daily summary to CSV file."""
+        """Saves daily summary to CSV report file."""
         reports_path = Path(reports_dir)
         reports_path.mkdir(parents=True, exist_ok=True)
-
-        date_str = summary["date"]
-        filepath = reports_path / f"summary_{date_str}.csv"
+        filepath = reports_path / f"summary_{summary['date']}.csv"
 
         try:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 writer.writerow(summary.keys())
                 writer.writerow(summary.values())
-
             logger.info(f"Saved daily summary to {filepath}")
         except IOError as e:
             logger.error(f"Failed to write summary file: {str(e)}")

@@ -1,5 +1,5 @@
-# Traffic Scraper Configuration
-# Route definitions for 10 key routes in Thu Duc, Ho Chi Minh City
+# Traffic Scraper & Backend Configuration
+# Route definitions for 10 key corridors in Thu Duc, Ho Chi Minh City
 
 routes:
   - id: route_001
@@ -10,7 +10,7 @@ routes:
     destination:
       lat: 10.835
       lng: 106.782
-    distance_km: 3
+    distance_km: 3.0
     description: "Tuyến cao tốc đông nhất"
 
   - id: route_002
@@ -43,7 +43,7 @@ routes:
     destination:
       lat: 10.785
       lng: 106.745
-    distance_km: 2
+    distance_km: 2.0
     description: "Khu Phú Mỹ Hưng gần Thủ Đức"
 
   - id: route_005
@@ -112,7 +112,6 @@ routes:
     distance_km: 2.8
     description: "Khu Nam Sài Gòn"
 
-# Scraper configuration
 scraper:
   interval_minutes: 15
   collection_days: 7
@@ -120,7 +119,6 @@ scraper:
   polling_start_time: "00:00"
   polling_end_time: "23:45"
 
-# Data storage configuration
 storage:
   data_dir: "data/scraped_data"
   reports_dir: "data/reports"
@@ -128,7 +126,6 @@ storage:
   daily_file_prefix: "traffic_data"
   summary_file_prefix: "summary"
 
-# Logging configuration
 logging:
   level: "INFO"
   format: "json"

@@ -1,21 +1,33 @@
 # Web Development — HCM City Traffic Intelligence
 
-Hệ thống giám sát giao thông đô thị thông minh theo thời gian thực và dự báo ùn tắc bằng AI tại **TP. Thủ Đức, TP. Hồ Chí Minh**. Dự án tích hợp thu thập dữ liệu tự động từ **TomTom Routing API**, phân tích chỉ số dịch vụ (Level of Service — LOS A-F), backend streaming WebSocket và giao diện Dashboard Civic Tech tương tác.
+Hệ thống giám sát giao thông đô thị thông minh theo thời gian thực và dự báo ùn tắc bằng AI tại **TP. Thủ Đức, TP. Hồ Chí Minh**. Dự án tích hợp thu thập dữ liệu định kỳ từ **TomTom Routing API**, phân tích chỉ số dịch vụ (Level of Service — LOS A-F), backend streaming WebSocket và giao diện Dashboard Civic Tech tương tác.
 
 ---
 
-## 🏛️ Cấu trúc dự án
+## 🏛️ Cấu trúc dự án hợp nhất (Gọn gàng & Chuẩn mực)
 
 ```text
 webdev-traffic-AI/
-├── backend/                    # FastAPI Server (REST API, WebSocket, AI Forecasting Engine)
-│   ├── services/
+├── backend/                    # Toàn bộ mã nguồn Backend hợp nhất (FastAPI + Scraper + AI Engine)
+│   ├── config/                 # Cấu hình 10 tuyến đường (routes.yaml) & nạp môi trường (settings.py)
+│   ├── core/                   # Các thành phần lõi
+│   │   ├── api_client.py       # TomTom Routing API client kèm retry logic (tenacity)
+│   │   ├── data_processor.py   # Kiểm tra schema, chống trùng lặp, lưu CSV & Dead Letter Queue
+│   │   ├── logger.py           # Structured JSON logger xoay vòng hàng ngày
+│   │   └── models.py           # Pydantic schemas, Dataclasses & thuật toán phân loại LOS A-F
+│   ├── services/               # Các dịch vụ nghiệp vụ
 │   │   ├── ai_engine.py        # Mô hình dự báo chuỗi thời gian & sóng ùn tắc (+15m, +30m, +45m)
-│   │   └── traffic_service.py  # Quản lý metadata tuyến, telemetry thời gian thực & kịch bản mô phỏng
-│   ├── main.py                 # FastAPI application & WebSocket connection manager
-│   ├── models.py               # Pydantic schemas
-│   ├── run.py                  # Script khởi động backend (Port 8000)
-│   └── requirements.txt        # Thư viện phụ thuộc
+│   │   ├── traffic_service.py  # Điều phối dữ liệu telemetry, routes và các kịch bản mô phỏng
+│   │   └── scheduler.py        # APScheduler thu thập dữ liệu định kỳ 15 phút/lần
+│   ├── tests/                  # Bộ 29 unit tests (pytest) kiểm thử toàn diện
+│   ├── data/                   # Dữ liệu cào CSV (scraped_data/), báo cáo (reports/), lỗi (failed_routes.csv)
+│   ├── docs/                   # Tài liệu kỹ thuật chi tiết (TECH_DOCS.md)
+│   ├── main.py                 # FastAPI application, REST endpoints & WebSocket server
+│   ├── run.py                  # Script chạy máy chủ backend (Port 8000)
+│   ├── scraper_runner.py       # Script chạy độc lập tác vụ cào dữ liệu (CLI)
+│   ├── requirements.txt        # Danh sách thư viện Python
+│   ├── pyproject.toml          # Cấu hình pytest
+│   └── .env.example            # Mẫu biến môi trường
 │
 ├── frontend/                   # React 18 + Vite + Tailwind CSS (Civic Tech Light Mode)
 │   ├── src/
@@ -29,16 +41,11 @@ webdev-traffic-AI/
 │   │   │   └── SimulationControls.tsx # Bảng giả lập kịch bản giờ cao điểm / tai nạn cho BGK
 │   │   ├── services/api.ts            # Client API kết nối Backend
 │   │   ├── types.ts                   # TypeScript interfaces
-│   │   └── App.tsx                    # Layout tổng hợp Bento Grid
+│   │   └── App.tsx                    # Layout tổng thể Bento Grid
 │   └── package.json
 │
-├── traffic_scraper/            # Engine cào dữ liệu định kỳ mỗi 15 phút từ TomTom API
-│   ├── config/routes.yaml      # Định nghĩa tọa độ 10 tuyến huyết mạch TP. Thủ Đức
-│   ├── docs/TECH_DOCS.md       # Tài liệu kiến trúc & đặc tả kỹ thuật chi tiết
-│   ├── src/                    # API client, scheduler, data processor, logger
-│   └── tests/                  # Bộ 29 unit tests (pytest)
-│
-├── run_app.py                  # Script 1-click khởi chạy đồng thời cả Backend & Frontend
+├── run_app.py                  # Script Python 1-click khởi chạy đồng thời Backend & Frontend
+├── start_dashboard.bat         # File .bat 1-click khởi chạy trên Windows
 └── README.md
 ```
 
@@ -51,12 +58,8 @@ webdev-traffic-AI/
 Yêu cầu: **Python 3.11+** và **Node.js 18+**.
 
 ```bash
-# Clone repository
-git clone https://github.com/bechovang/webdev-traffic-AI.git
-cd webdev-traffic-AI
-
-# Cài đặt backend & scraper (nếu chưa cài)
-traffic_scraper\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+# Cài đặt backend
+.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
 
 # Cài đặt frontend
 cd frontend
@@ -64,10 +67,15 @@ npm install
 cd ..
 ```
 
-### 2. Chạy ứng dụng
+### 2. Khởi chạy hệ thống
 
-Chạy file launcher tích hợp để mở cả Backend và Frontend:
+**Cách 1 (Khuyên dùng trên Windows)**:
+Nhấp đúp chuột vào file **`start_dashboard.bat`** hoặc gõ lệnh:
+```bash
+start_dashboard.bat
+```
 
+**Cách 2 (Dùng Python runner)**:
 ```bash
 python run_app.py
 ```
@@ -78,26 +86,16 @@ python run_app.py
 
 ---
 
-## 🚦 Tính năng nổi bật cho Hội đồng Ban giám khảo
-
-1. **Bản đồ GIS tương tác TP. Thủ Đức**: 10 tuyến đường trọng điểm (Phạm Văn Đồng, Xa Lộ Hà Nội, Mai Chí Thọ, Nguyễn Duy Trinh, Võ Nguyên Giáp...) được tô màu tự động theo cấp độ dịch vụ LOS A (Xanh) đến F (Đỏ thẫm).
-2. **Luồng dữ liệu thời gian thực (WebSocket)**: Dashboard nhận cập nhật trực tiếp mỗi 8 giây hoặc ngay lập tức khi nhấn nút **"Cập nhật ngay" (Poll Now)**.
-3. **Phân hệ Dự báo AI (+15, +30, +45 phút)**: Kết hợp mô hình suy giảm vận tốc giờ cao điểm và momentum gia tốc lưu lượng, đưa ra khuyến nghị phân luồng giao thông đô thị.
-4. **Bảng điều khiển Giả lập Kịch bản (Demo Studio)**: Cho phép chuyển đổi tức thì giữa các tình huống thực tế: *Bình thường, Cao điểm Sáng (7h-9h), Cao điểm Chiều (17h-19h), Sự cố va chạm giao thông, Mưa lớn/Ngập úng*.
-5. **Giao diện Civic Tech Light Mode**: Thiết kế theo tiêu chuẩn hệ thống thông tin đô thị hiện đại, độ tương phản cao, tối ưu hiển thị trên màn hình laptop lẫn máy chiếu hội trường.
-
----
-
 ## 🧪 Kiểm thử đơn vị (Unit Tests)
 
-Bộ 29 test cases kiểm tra API client, data validation, scheduler và dead-letter queue:
+Bộ 29 test cases kiểm thử độc lập API client, data validation, scheduler và dead-letter queue:
 
 ```bash
-cd traffic_scraper
-..\traffic_scraper\.venv\Scripts\python.exe -m pytest -v
+cd backend
+..\.venv\Scripts\python.exe -m pytest -v
 ```
 
-Kết quả: **29/29 tests passed**.
+Kết quả: **29/29 tests passed (100%)**.
 
 ---
 

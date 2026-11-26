@@ -1,6 +1,9 @@
 import type { LiveTrafficMetric, RouteInfo, RoutePrediction, SystemSummary } from '../types';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : 'http://127.0.0.1:8000';
 
 export async function getRoutes(): Promise<RouteInfo[]> {
   const res = await fetch(`${API_BASE}/api/routes`);
